@@ -1,0 +1,12 @@
+CompileFlags:
+  Add:
+    - "-x"
+    - "c"
+    - "-std=c11"
+    - "-I/home/jr/Code/xlang/vendor"
+
+Diagnostics:
+  UnusedIncludes: None
+  Suppress:
+    - "unused-*"
+    - "stringop-truncation"

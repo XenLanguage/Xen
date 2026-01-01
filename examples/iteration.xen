@@ -1,0 +1,39 @@
+println("Iteration using C-style:");
+for (var i = 0; i < 10; i++) {
+    println(i);
+}
+
+println("");
+println("Iteration with compound operators:");
+for (var i = 0; i < 100; i += 10) {
+    println(i);
+}
+
+println("");
+println("Iteration with range-based loop:");
+for (var i in 0..10) {
+    println(i);
+}
+
+println("");
+println("More compound operations:");
+
+var a = 5;
+println("var a = ", a);
+var b = a++;  // b = 5, a = 6
+println("var b = a++: ", b);
+var c = ++a;  // c = 7, a = 7
+println("var c = ++a: ", c);
+
+var x = 10;
+println("var x = ", x);
+x += 5;
+println("x += 5: ", x);
+x -= 2;
+println("x -= 2: ", x);
+x *= 3;
+println("x *= 3: ", x);
+x /= 2;
+println("x /= 2: ", x);
+x %= 7;
+println("x %= 7: ", x);

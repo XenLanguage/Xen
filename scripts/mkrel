@@ -1,0 +1,49 @@
+#!/bin/bash
+
+read -p "Version: " VERSION
+
+if [ -z "$VERSION" ]; then
+    echo "No version was provided"
+    exit 1
+fi
+
+echo "Creating distributables for Xen v$VERSION"
+
+make clean
+make release
+make windows-release
+
+REL_DIR=./releases/$VERSION
+mkdir -p "$REL_DIR/linux"
+mkdir -p "$REL_DIR/windows"
+
+LINUX_BIN_TAR="$REL_DIR/linux/Xen-$VERSION-linux-x64.tar.gz"
+WINDOWS_BIN_ZIP="$REL_DIR/windows/Xen-$VERSION-windows-x64.zip"
+WINDOWS_EXE="$REL_DIR/windows/Xen-$VERSION-windows-x64.exe"
+SOURCE_TAR="$REL_DIR/Xen-$VERSION.tar.gz"
+
+tar -czf $LINUX_BIN_TAR bin/ README.md LICENSE
+zip -r $WINDOWS_BIN_ZIP bin_win/ README.md LICENSE
+makensis -DVERSION=$VERSION scripts/windows_installer.nsi
+tar -czf $SOURCE_TAR src/ examples/ .clang-format README.md LICENSE Makefile
+
+CHECKSUM_LINUX=$(sha256sum $LINUX_BIN_TAR | awk '{print $1}')
+CHECKSUM_WINDOWS=$(sha256sum $WINDOWS_BIN_ZIP | awk '{print $1}')
+CHECKSUM_WINDOWS_EXE=$(sha256sum $WINDOWS_EXE | awk '{print $1}')
+CHECKSUM_SOURCE=$(sha256sum $SOURCE_TAR | awk '{print $1}')
+
+SIZE_LINUX=$(stat -c%s $LINUX_BIN_TAR)
+SIZE_WINDOWS=$(stat -c%s $WINDOWS_BIN_ZIP)
+SIZE_WINDOWS_EXE=$(stat -c%s $WINDOWS_EXE)
+SIZE_SOURCE=$(stat -c%s $SOURCE_TAR)
+
+cat >"$REL_DIR/checksums.txt" <<EOF
+$CHECKSUM_LINUX  Xen-$VERSION-linux-x64.tar.gz  $SIZE_LINUX bytes
+$CHECKSUM_WINDOWS  Xen-$VERSION-windows-x64.zip  $SIZE_WINDOWS bytes
+$CHECKSUM_WINDOWS_EXE  Xen-$VERSION-windows-x64.exe  $SIZE_WINDOWS_EXE bytes
+$CHECKSUM_SOURCE  Xen-$VERSION.tar.gz  $SIZE_SOURCE bytes
+EOF
+
+echo ""
+echo "=== DONE ==="
+echo "Created Xen v$VERSION"
