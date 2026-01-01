@@ -71,6 +71,7 @@ static const char* builtin_namespaces[] = {
   "math",
   "io",
   "string",
+  "datetime",
   NULL, /* sentinel */
 };
 
