@@ -133,7 +133,10 @@ static xen_token_type identifier_type() {
                     case 'f':
                         return check_keyword(2, 0, "", TOKEN_IF);
                     case 'n':
-                        return check_keyword(2, 0, "", TOKEN_IN);
+                        if (scanner.current - scanner.start == 2) {
+                            return TOKEN_IN;
+                        }
+                        return check_keyword(2, 5, "clude", TOKEN_INCLUDE);
                 }
             }
         case 'n':
@@ -377,6 +380,8 @@ const char* xen_token_type_to_str(xen_token_type type) {
             return "in";
         case TOKEN_PERCENT_EQUAL:
             return "%=";
+        case TOKEN_INCLUDE:
+            return "include";
     }
     return "";
 }

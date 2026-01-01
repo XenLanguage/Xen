@@ -67,6 +67,22 @@ typedef struct xen_compiler {
     i32 scope_depth;
 } xen_compiler;
 
+static const char* builtin_namespaces[] = {
+  "math",
+  "io",
+  "string",
+  NULL, /* sentinel */
+};
+
+static bool is_valid_namespace(const char* name, i32 length) {
+    for (i32 i = 0; builtin_namespaces[i] != NULL; i++) {
+        if ((i32)strlen(builtin_namespaces[i]) == length && memcmp(builtin_namespaces[i], name, length) == 0) {
+            return XEN_TRUE;
+        }
+    }
+    return XEN_FALSE;
+}
+
 // ============================================================================
 // Globals
 // ============================================================================
@@ -647,6 +663,13 @@ static void prefix_dec(bool can_assign) {
     emit_bytes(set_op, (u8)arg);
 }
 
+static void dot(bool can_assign) {
+    XEN_UNUSED(can_assign);
+    consume(TOKEN_IDENTIFIER, "expected property name after '.'");
+    u8 name = identifier_constant(&parser.previous);
+    emit_bytes(OP_GET_PROPERTY, name);
+}
+
 // ============================================================================
 // Parse Rules
 // ============================================================================
@@ -658,7 +681,7 @@ xen_parse_rule rules[] = {
     [TOKEN_LEFT_BRACE]       = {NULL,       NULL,        PREC_NONE},
     [TOKEN_RIGHT_BRACE]      = {NULL,       NULL,        PREC_NONE},
     [TOKEN_COMMA]            = {NULL,       NULL,        PREC_NONE},
-    [TOKEN_DOT]              = {NULL,       NULL,        PREC_NONE},
+    [TOKEN_DOT]              = {NULL,       dot,         PREC_CALL},
     [TOKEN_DOT_DOT]          = {NULL,       NULL,        PREC_NONE},
     [TOKEN_MINUS]            = {unary,      binary,      PREC_TERM},
     [TOKEN_PLUS]             = {NULL,       binary,      PREC_TERM},
@@ -699,6 +722,7 @@ xen_parse_rule rules[] = {
     [TOKEN_TRUE]             = {literal,    NULL,        PREC_NONE},
     [TOKEN_VAR]              = {NULL,       NULL,        PREC_NONE},
     [TOKEN_WHILE]            = {NULL,       NULL,        PREC_NONE},
+    [TOKEN_INCLUDE]          = {NULL,       NULL,        PREC_NONE},
     [TOKEN_ERROR]            = {NULL,       NULL,        PREC_NONE},
     [TOKEN_EOF]              = {NULL,       NULL,        PREC_NONE},
 };
@@ -754,6 +778,7 @@ static void synchronize() {
             case TOKEN_IF:
             case TOKEN_WHILE:
             case TOKEN_RETURN:
+            case TOKEN_INCLUDE:
                 return;
             default:
                 break;
@@ -1238,11 +1263,27 @@ static void fn_declaration() {
     define_variable(global);
 }
 
+static void include_declaration() {
+    consume(TOKEN_IDENTIFIER, "expected namespace name after 'include'");
+    xen_token name = parser.previous;
+
+    if (!is_valid_namespace(name.start, name.length)) {
+        error("unknown namespace");
+        return;
+    }
+
+    consume(TOKEN_SEMICOLON, "expected ';' after include statement");
+    u8 name_constant = identifier_constant(&name);
+    emit_bytes(OP_INCLUDE, name_constant);
+}
+
 static void declaration() {
     if (match_token(TOKEN_FN)) {
         fn_declaration();
     } else if (match_token(TOKEN_VAR)) {
         var_declaration();
+    } else if (match_token(TOKEN_INCLUDE)) {
+        include_declaration();
     } else {
         statement();
     }

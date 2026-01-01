@@ -12,6 +12,8 @@ typedef struct xen_obj xen_obj;
 typedef struct xen_obj_str xen_obj_str;
 typedef struct xen_obj_func xen_obj_func;
 typedef struct xen_obj_native_func xen_obj_native_func;
+typedef struct xen_ns_entry xen_ns_entry;
+typedef struct xen_obj_namespace xen_obj_namespace;
 
 typedef enum {
     VAL_BOOL,

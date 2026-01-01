@@ -12,6 +12,7 @@
 #include "xutils.h"
 #include "xvalue.h"
 #include "xstd.h"
+#include "xbuiltin.h"
 
 //====================================================================================================================//
 
@@ -137,16 +138,19 @@ void xen_vm_init(xen_vm_config config) {
     g_vm.objects = NULL;
     xen_table_init(&g_vm.globals);
     xen_table_init(&g_vm.strings);
+    xen_table_init(&g_vm.namespace_registry);
 
-    // define native functions
-    // TODO: Abstract this into a cleaner solution
-    define_native_fn("println", xstd_println);
+    // define native functions in global namespace
     define_native_fn("typeof", xstd_typeof);
+
+    // register built in namespaces
+    xen_builtins_register();
 }
 
 void xen_vm_shutdown() {
     xen_table_free(&g_vm.strings);
     xen_table_free(&g_vm.globals);
+    xen_table_free(&g_vm.namespace_registry);
     xen_vm_mem_destroy(&g_vm.mem);
 }
 
@@ -338,6 +342,40 @@ static xen_exec_result run() {
             case OP_LOOP: {
                 u16 offset = READ_SHORT();
                 frame->ip -= offset;
+                break;
+            }
+            case OP_INCLUDE: {
+                xen_obj_str* name = OBJ_AS_STRING(READ_CONSTANT());
+                xen_value namespace_val;
+                if (!xen_table_get(&g_vm.namespace_registry, name, &namespace_val)) {
+                    runtime_error("unknown namespace '%s'", name->str);
+                    return EXEC_RUNTIME_ERROR;
+                }
+                xen_table_set(&g_vm.globals, name, namespace_val);
+                break;
+            }
+            case OP_GET_PROPERTY: {
+                xen_obj_str* name = OBJ_AS_STRING(READ_CONSTANT());
+                xen_value obj_val = peek(0);
+                if (!VAL_IS_OBJ(obj_val)) {
+                    runtime_error("only objects have properties");
+                    return EXEC_RUNTIME_ERROR;
+                }
+                xen_obj* obj = VAL_AS_OBJ(obj_val);
+                if (obj->type == OBJ_NAMESPACE) {
+                    xen_obj_namespace* ns = (xen_obj_namespace*)obj;
+                    xen_value result;
+                    if (xen_obj_namespace_get(ns, name->str, &result)) {
+                        stack_pop();        /* pop the namespace */
+                        stack_push(result); /* push the property value */
+                    } else {
+                        runtime_error("undefined property '%s' in namespace '%s'");
+                        return EXEC_RUNTIME_ERROR;
+                    }
+                } else {
+                    runtime_error("object does not support property access");
+                    return EXEC_RUNTIME_ERROR;
+                }
                 break;
             }
             default: {
