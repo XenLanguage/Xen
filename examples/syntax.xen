@@ -1,0 +1,45 @@
+// This file showcases the entire syntax of the Xen programming language
+// All lines must end in a semicolon
+
+// Packages are imported like so:
+include io;
+include math;
+include string;
+include datetime;
+include array;
+
+// Global variables are defined like so:
+var ITERS = 1000;
+
+// Loops
+for (var i = 0; i < ITERS; i++) {
+    io.println(i); // print text to console
+}
+
+// range based loop
+for (var i in 0..ITERS) {
+    io.println(i);
+}
+
+// arrays
+var items = ["apple", "banana", "orange"];
+
+// range based array iteration
+for (var i in items) {
+    io.println(i);
+}
+
+// while loop
+while (array.len(items) > 0) {
+    var item = array.pop(items);
+    io.println(item);
+}
+
+// Functions
+fn say_hello() {
+    io.print("Enter your name: ");
+    var name = io.readline();
+    io.println("Hello, ", name, "!");
+}
+
+say_hello();

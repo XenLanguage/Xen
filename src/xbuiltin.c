@@ -54,6 +54,31 @@ static xen_value xen_builtin_typeof(i32 argc, xen_value* args) {
     return OBJ_VAL(xen_obj_str_copy(type_str, strlen(type_str)));
 }
 
+static xen_value xen_builtin_number(i32 argc, xen_value* args) {
+    ENFORCE_NUM_ARGS(1);
+    xen_value val = args[0];
+    if (VAL_IS_BOOL(val)) {
+        return NUMBER_VAL((i32)VAL_AS_BOOL(val));
+    } else if (VAL_IS_NULL(val)) {
+        return NUMBER_VAL(0);
+    } else if (VAL_IS_NUMBER(val)) {
+        return val;
+    } else if (VAL_IS_OBJ(val)) {
+        switch (OBJ_TYPE(val)) {
+            case OBJ_STRING: {
+                xen_obj_str* str = OBJ_AS_STRING(val);
+                f64 as_num       = strtod(str->str, NULL);
+                return NUMBER_VAL(as_num);
+            }
+            default:
+                xen_runtime_error("cannot cast 'object' to number");
+                return NULL_VAL;
+        }
+    }
+    xen_runtime_error("cannot cast 'undefined' to number");
+    return NULL_VAL;
+}
+
 void xen_builtins_register() {
     srand((u32)time(NULL));
     xen_vm_register_namespace("math", OBJ_VAL(xen_builtin_math()));
@@ -64,6 +89,10 @@ void xen_builtins_register() {
 
     /* register globals */
     define_native_fn("typeof", xen_builtin_typeof);
+
+    /* generic hack for casting to numbers. */
+    /* once everything is represented by a Xen object, this won't be necessary */
+    define_native_fn("number", xen_builtin_number);
 }
 
 void xen_vm_register_namespace(const char* name, xen_value ns) {
@@ -225,7 +254,10 @@ xen_obj_namespace* xen_builtin_math() {
 // ========================
 
 static xen_value io_println(i32 argc, xen_value* args) {
-    ENFORCE_NUM_ARGS(1);
+    if (argc == 0) {
+        xen_runtime_error("io.println() requires at least one argument");
+        return NULL_VAL;
+    }
     for (i32 i = 0; i < argc; i++) {
         xen_value_print(args[i]);
     }
@@ -234,7 +266,10 @@ static xen_value io_println(i32 argc, xen_value* args) {
 }
 
 static xen_value io_print(i32 argc, xen_value* args) {
-    ENFORCE_NUM_ARGS(1);
+    if (argc == 0) {
+        xen_runtime_error("io.print() requires at least one argument");
+        return NULL_VAL;
+    }
     for (i32 i = 0; i < argc; i++) {
         xen_value_print(args[i]);
     }
