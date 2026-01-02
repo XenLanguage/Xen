@@ -89,9 +89,19 @@ void xen_value_print(xen_value value) {
         case VAL_NULL:
             printf("null");
             break;
-        case VAL_NUMBER:
-            printf("%g", VAL_AS_NUMBER(value));
+        case VAL_NUMBER: {
+            char buffer[64];
+            snprintf(buffer, sizeof buffer, "%.15f", VAL_AS_NUMBER(value));
+
+            char* p = buffer + strlen(buffer) - 1;
+            while (*p == '0')
+                *p-- = '\0';
+            if (*p == '.')
+                *p = '\0';
+
+            printf("%s", buffer);
             break;
+        }
         case VAL_OBJECT: {
             xen_obj_print(value);
         } break;

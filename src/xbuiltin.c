@@ -6,15 +6,19 @@
 #include <ctype.h>
 #include <time.h>
 
+#define ENFORCE_NUM_ARGS(n)                                                                                            \
+    if (argc != n) {                                                                                                   \
+        xen_runtime_error("incorrect number of arguments provided: '%d' (requires %d)", argc, n);                      \
+        return NULL_VAL;                                                                                               \
+    }
+
 static void define_native_fn(const char* name, xen_native_fn fn) {
     xen_obj_str* key = xen_obj_str_copy(name, strlen(name));
     xen_table_set(&g_vm.globals, key, OBJ_VAL(xen_obj_native_func_new(fn, name)));
 }
 
-static xen_value xen_builtin_typeof(i32 arg_count, xen_value* args) {
-    if (arg_count != 1) {
-        return NULL_VAL;
-    }
+static xen_value xen_builtin_typeof(i32 argc, xen_value* args) {
+    ENFORCE_NUM_ARGS(1);
 
     xen_value val = args[0];
     const char* type_str;
@@ -74,7 +78,8 @@ void xen_vm_register_namespace(const char* name, xen_value ns) {
 #include <math.h>
 
 static xen_value math_sqrt(i32 argc, xen_value* args) {
-    if (argc != 1 || !VAL_IS_NUMBER(args[0])) {
+    ENFORCE_NUM_ARGS(1);
+    if (!VAL_IS_NUMBER(args[0])) {
         /* In production, set an error flag */
         return NULL_VAL;
     }
@@ -82,67 +87,78 @@ static xen_value math_sqrt(i32 argc, xen_value* args) {
 }
 
 static xen_value math_abs(i32 argc, xen_value* args) {
-    if (argc != 1 || !VAL_IS_NUMBER(args[0]))
+    ENFORCE_NUM_ARGS(1);
+    if (!VAL_IS_NUMBER(args[0]))
         return NULL_VAL;
     return NUMBER_VAL(fabs(VAL_AS_NUMBER(args[0])));
 }
 
 static xen_value math_floor(i32 argc, xen_value* args) {
-    if (argc != 1 || !VAL_AS_NUMBER(args[0]))
+    ENFORCE_NUM_ARGS(1);
+    if (!VAL_AS_NUMBER(args[0]))
         return NULL_VAL;
     return NUMBER_VAL(floor(VAL_AS_NUMBER(args[0])));
 }
 
 static xen_value math_ceil(i32 argc, xen_value* args) {
-    if (argc != 1 || !VAL_AS_NUMBER(args[0]))
+    ENFORCE_NUM_ARGS(1);
+    if (!VAL_AS_NUMBER(args[0]))
         return NULL_VAL;
     return NUMBER_VAL(ceil(VAL_AS_NUMBER(args[0])));
 }
 
 static xen_value math_round(i32 argc, xen_value* args) {
-    if (argc != 1 || !VAL_IS_NUMBER(args[0]))
+    ENFORCE_NUM_ARGS(1);
+    if (!VAL_IS_NUMBER(args[0]))
         return NULL_VAL;
     return NUMBER_VAL(round(VAL_AS_NUMBER(args[0])));
 }
 
 static xen_value math_sin(i32 argc, xen_value* args) {
-    if (argc != 1 || !VAL_IS_NUMBER(args[0]))
+    ENFORCE_NUM_ARGS(1);
+    if (!VAL_IS_NUMBER(args[0]))
         return NULL_VAL;
     return NUMBER_VAL(sin(VAL_AS_NUMBER(args[0])));
 }
 
 static xen_value math_cos(i32 argc, xen_value* args) {
-    if (argc != 1 || !VAL_IS_NUMBER(args[0]))
+    ENFORCE_NUM_ARGS(1);
+    if (!VAL_IS_NUMBER(args[0]))
         return NULL_VAL;
     return NUMBER_VAL(cos(VAL_AS_NUMBER(args[0])));
 }
 
 static xen_value math_tan(i32 argc, xen_value* args) {
-    if (argc != 1 || !VAL_IS_NUMBER(args[0]))
+    ENFORCE_NUM_ARGS(1);
+    if (!VAL_IS_NUMBER(args[0]))
         return NULL_VAL;
     return NUMBER_VAL(tan(VAL_AS_NUMBER(args[0])));
 }
 
 static xen_value math_pow(i32 argc, xen_value* args) {
-    if (argc != 2 || !VAL_IS_NUMBER(args[0]) || !VAL_IS_NUMBER(args[1]))
+    ENFORCE_NUM_ARGS(2);
+    if (!VAL_IS_NUMBER(args[0]) || !VAL_IS_NUMBER(args[1]))
         return NULL_VAL;
     return NUMBER_VAL(pow(VAL_AS_NUMBER(args[0]), VAL_AS_NUMBER(args[1])));
 }
 
 static xen_value math_log(i32 argc, xen_value* args) {
-    if (argc != 1 || !VAL_IS_NUMBER(args[0]))
+    ENFORCE_NUM_ARGS(1);
+    if (!VAL_IS_NUMBER(args[0]))
         return NULL_VAL;
     return NUMBER_VAL(log(VAL_AS_NUMBER(args[0])));
 }
 
 static xen_value math_log10(i32 argc, xen_value* args) {
-    if (argc != 1 || !VAL_IS_NUMBER(args[0]))
+    ENFORCE_NUM_ARGS(1);
+    if (!VAL_IS_NUMBER(args[0]))
         return NULL_VAL;
     return NUMBER_VAL(log10(VAL_AS_NUMBER(args[0])));
 }
 
 static xen_value math_exp(i32 argc, xen_value* args) {
-    if (argc != 1 || !VAL_IS_NUMBER(args[0]))
+    ENFORCE_NUM_ARGS(1);
+    if (!VAL_IS_NUMBER(args[0]))
         return NULL_VAL;
     return NUMBER_VAL(exp(VAL_AS_NUMBER(args[0])));
 }
@@ -209,6 +225,7 @@ xen_obj_namespace* xen_builtin_math() {
 // ========================
 
 static xen_value io_println(i32 argc, xen_value* args) {
+    ENFORCE_NUM_ARGS(1);
     for (i32 i = 0; i < argc; i++) {
         xen_value_print(args[i]);
     }
@@ -217,6 +234,7 @@ static xen_value io_println(i32 argc, xen_value* args) {
 }
 
 static xen_value io_print(i32 argc, xen_value* args) {
+    ENFORCE_NUM_ARGS(1);
     for (i32 i = 0; i < argc; i++) {
         xen_value_print(args[i]);
     }
@@ -224,8 +242,11 @@ static xen_value io_print(i32 argc, xen_value* args) {
 }
 
 static xen_value io_readline(i32 argc, xen_value* args) {
-    (void)argc;
-    (void)args;
+    if (argc != 0) {
+        xen_runtime_error("io_readline() doesn't take any arguments");
+        /* this doesn't actually cause any problems so continue as normal */
+    }
+    XEN_UNUSED(args);
     char buffer[1024];
     if (fgets(buffer, sizeof(buffer), stdin)) {
         /* remove trailing newline */
@@ -237,6 +258,39 @@ static xen_value io_readline(i32 argc, xen_value* args) {
         return OBJ_VAL(xen_obj_str_copy(buffer, (i32)len));
     }
     return NULL_VAL;
+}
+
+/*
+ * Signature: fn io::readbinary(string filename) -> number[]
+ */
+static xen_value io_readbinary(i32 argc, xen_value* args) {
+    ENFORCE_NUM_ARGS(1);
+    if (!OBJ_IS_STRING(args[0])) {
+        xen_runtime_error("filename must be a string");
+        return NULL_VAL;
+    }
+
+    xen_obj_str* filename = OBJ_AS_STRING(args[0]);
+    FILE* fp              = fopen(filename->str, "rb");
+
+    if (!fp) {
+        xen_runtime_error("failed to open file: %s", filename->str);
+        return NULL_VAL;
+    }
+
+    fseek(fp, 0, SEEK_END);
+    i32 size = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+
+    u8* buffer = (u8*)malloc(size);
+
+    size_t read_bytes  = fread(buffer, 1, size, fp);
+    buffer[read_bytes] = '\0';
+    fclose(fp);
+
+    xen_obj_array* byte_arr = xen_obj_array_new_with_capacity(size);
+    /* TODO: Implement a proper data structure */
+    return OBJ_VAL(byte_arr);
 }
 
 xen_obj_namespace* xen_builtin_io() {
