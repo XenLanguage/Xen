@@ -1,0 +1,21 @@
+include io;
+include math;
+include string;
+include datetime;
+
+var ITERS = 1000000;
+
+fn busy_work() {
+    var start = datetime.now();
+    
+    for (var i in 0..ITERS) {
+        io.println(i);
+    }
+    
+    var end = datetime.now();
+    var elapsed = end - start;
+
+    io.println("Took: ", elapsed, " seconds");
+}
+
+busy_work();

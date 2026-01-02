@@ -363,6 +363,70 @@ static xen_exec_result run() {
                 }
                 break;
             }
+            case OP_ARRAY_NEW: {
+                u8 element_count   = READ_BYTE();
+                xen_obj_array* arr = xen_obj_array_new_with_capacity(element_count);
+                arr->array.count   = element_count;
+                /* Elements are on stack in reverse order (first pushed = bottom) */
+                /* We need to add them in correct order */
+                for (i32 i = element_count - 1; i >= 0; i--) {
+                    arr->array.values[i] = stack_pop();
+                }
+                stack_push(OBJ_VAL(arr));
+                break;
+            }
+            case OP_ARRAY_GET: {
+                /* stack: [array, index] -> [value] */
+                xen_value index_val = stack_pop();
+                xen_value array_val = stack_pop();
+
+                if (!OBJ_IS_ARRAY(array_val)) {
+                    runtime_error("can only index into arrays");
+                    return EXEC_RUNTIME_ERROR;
+                }
+                if (!VAL_IS_NUMBER(index_val)) {
+                    runtime_error("array index must be a number");
+                    return EXEC_RUNTIME_ERROR;
+                }
+
+                xen_obj_array* arr = OBJ_AS_ARRAY(array_val);
+                i32 index          = (i32)VAL_AS_NUMBER(index_val);
+
+                if (index < 0 || index >= arr->array.count) {
+                    runtime_error("array index %d is out of bounds (length %d)", index, arr->array.count);
+                    return EXEC_RUNTIME_ERROR;
+                }
+
+                stack_push(arr->array.values[index]);
+                break;
+            }
+            case OP_ARRAY_SET: {
+                /* stack: [array, index, value] -> [value] */
+                xen_value value     = stack_pop();
+                xen_value index_val = stack_pop();
+                xen_value array_val = stack_pop();
+
+                if (!OBJ_IS_ARRAY(array_val)) {
+                    runtime_error("can only index into arrays");
+                    return EXEC_RUNTIME_ERROR;
+                }
+                if (!VAL_IS_NUMBER(index_val)) {
+                    runtime_error("array index must be a number");
+                    return EXEC_RUNTIME_ERROR;
+                }
+
+                xen_obj_array* arr = OBJ_AS_ARRAY(array_val);
+                i32 index          = (i32)VAL_AS_NUMBER(index_val);
+
+                if (index < 0 || index >= arr->array.count) {
+                    runtime_error("array index %d out of bounds (length %d)", index, arr->array.count);
+                    return EXEC_RUNTIME_ERROR;
+                }
+
+                arr->array.values[index] = value;
+                stack_push(value); /* assignment is an expression, leaves value on stack */
+                break;
+            }
             default: {
                 runtime_error("unknown instruction (%d)", instruction);
             }

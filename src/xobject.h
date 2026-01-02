@@ -9,6 +9,7 @@ typedef enum {
     OBJ_FUNCTION,
     OBJ_NATIVE_FUNC,
     OBJ_NAMESPACE,
+    OBJ_ARRAY,
 } xen_obj_type;
 
 struct xen_obj {
@@ -51,14 +52,17 @@ struct xen_obj_namespace {
     i32 capacity;
 };
 
+struct xen_obj_array {
+    xen_obj obj;
+    xen_value_array array;
+};
+
 #define OBJ_TYPE(v) (VAL_AS_OBJ(v)->type)
 
-/* String object macros */
 #define OBJ_IS_STRING(v) xen_obj_is_type(v, OBJ_STRING)
 #define OBJ_AS_STRING(v) ((xen_obj_str*)VAL_AS_OBJ(v))
 #define OBJ_AS_CSTRING(v) (((xen_obj_str*)VAL_AS_OBJ(v))->str)
 
-/* Function object macros */
 #define OBJ_IS_FUNCTION(v) xen_obj_is_type(v, OBJ_FUNCTION)
 #define OBJ_AS_FUNCTION(v) ((xen_obj_func*)VAL_AS_OBJ(v))
 
@@ -67,6 +71,9 @@ struct xen_obj_namespace {
 
 #define OBJ_IS_NAMESPACE(v) xen_obj_is_type(v, OBJ_NAMESPACE)
 #define OBJ_AS_NAMESPACE(v) ((xen_obj_namespace*)VAL_AS_OBJ(v))
+
+#define OBJ_IS_ARRAY(v) xen_obj_is_type(v, OBJ_ARRAY)
+#define OBJ_AS_ARRAY(v) ((xen_obj_array*)VAL_AS_OBJ(v))
 
 bool xen_obj_is_type(xen_value value, xen_obj_type type);
 void xen_obj_print(xen_value value);
@@ -80,5 +87,13 @@ xen_obj_native_func* xen_obj_native_func_new(xen_native_fn function, const char*
 xen_obj_namespace* xen_obj_namespace_new(const char* name);
 void xen_obj_namespace_set(xen_obj_namespace* ns, const char* name, xen_value value);
 bool xen_obj_namespace_get(xen_obj_namespace* ns, const char* name, xen_value* out);
+
+xen_obj_array* xen_obj_array_new();
+xen_obj_array* xen_obj_array_new_with_capacity(i32 capacity);
+void xen_obj_array_push(xen_obj_array* arr, xen_value value);
+xen_value xen_obj_array_get(xen_obj_array* arr, i32 index);
+void xen_obj_array_set(xen_obj_array* arr, i32 index, xen_value value);
+xen_value xen_obj_array_pop(xen_obj_array* arr);
+i32 xen_obj_array_length(xen_obj_array* arr);
 
 #endif

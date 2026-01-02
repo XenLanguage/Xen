@@ -33,6 +33,9 @@ typedef enum {
     OP_LOOP,
     OP_INCLUDE,
     OP_GET_PROPERTY,
+    OP_ARRAY_NEW,
+    OP_ARRAY_GET,
+    OP_ARRAY_SET,
 } xen_opcode;
 
 typedef struct {

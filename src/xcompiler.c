@@ -68,10 +68,11 @@ typedef struct xen_compiler {
 } xen_compiler;
 
 static const char* builtin_namespaces[] = {
-  "math",
   "io",
+  "math",
   "string",
   "datetime",
+  "array",
   NULL, /* sentinel */
 };
 
@@ -671,6 +672,33 @@ static void dot(bool can_assign) {
     emit_bytes(OP_GET_PROPERTY, name);
 }
 
+static void array_lit(bool can_assign) {
+    XEN_UNUSED(can_assign);
+    u8 element_count = 0;
+    if (!check(TOKEN_RIGHT_BRACKET)) {
+        do {
+            if (element_count == 255) {
+                error("cannot have more than 255 elements in array literal");
+            }
+            expression();
+            element_count++;
+        } while (match_token(TOKEN_COMMA));
+    }
+    consume(TOKEN_RIGHT_BRACKET, "expected ']' after array elements");
+    emit_bytes(OP_ARRAY_NEW, element_count);
+}
+
+static void subscript(bool can_assign) {
+    expression();
+    consume(TOKEN_RIGHT_BRACKET, "expected ']' after index");
+    if (can_assign && match_token(TOKEN_EQUAL)) {
+        expression();
+        emit_byte(OP_ARRAY_SET);
+    } else {
+        emit_byte(OP_ARRAY_GET);
+    }
+}
+
 // ============================================================================
 // Parse Rules
 // ============================================================================
@@ -681,6 +709,8 @@ xen_parse_rule rules[] = {
     [TOKEN_RIGHT_PAREN]      = {NULL,       NULL,        PREC_NONE},
     [TOKEN_LEFT_BRACE]       = {NULL,       NULL,        PREC_NONE},
     [TOKEN_RIGHT_BRACE]      = {NULL,       NULL,        PREC_NONE},
+    [TOKEN_LEFT_BRACKET]     = {array_lit,  subscript,   PREC_CALL},
+    [TOKEN_RIGHT_BRACKET]    = {NULL,       NULL,        PREC_NONE},
     [TOKEN_COMMA]            = {NULL,       NULL,        PREC_NONE},
     [TOKEN_DOT]              = {NULL,       dot,         PREC_CALL},
     [TOKEN_DOT_DOT]          = {NULL,       NULL,        PREC_NONE},

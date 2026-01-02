@@ -8,12 +8,15 @@
 #include "xcommon.h"
 
 /* xobject.h forward declarations */
-typedef struct xen_obj xen_obj;
-typedef struct xen_obj_str xen_obj_str;
-typedef struct xen_obj_func xen_obj_func;
-typedef struct xen_obj_native_func xen_obj_native_func;
-typedef struct xen_ns_entry xen_ns_entry;
-typedef struct xen_obj_namespace xen_obj_namespace;
+// clang-format off
+typedef struct xen_obj               xen_obj;
+typedef struct xen_obj_str           xen_obj_str;
+typedef struct xen_obj_func          xen_obj_func;
+typedef struct xen_obj_native_func   xen_obj_native_func;
+typedef struct xen_ns_entry          xen_ns_entry;
+typedef struct xen_obj_namespace     xen_obj_namespace;
+typedef struct xen_obj_array         xen_obj_array;
+// clang-format on
 
 typedef enum {
     VAL_BOOL,

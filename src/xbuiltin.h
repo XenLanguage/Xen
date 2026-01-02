@@ -11,5 +11,6 @@ xen_obj_namespace* xen_builtin_math();
 xen_obj_namespace* xen_builtin_io();
 xen_obj_namespace* xen_builtin_string();
 xen_obj_namespace* xen_builtin_datetime();
+xen_obj_namespace* xen_builtin_array();
 
 #endif

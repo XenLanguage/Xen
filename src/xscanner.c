@@ -222,6 +222,10 @@ xen_token xen_scanner_emit() {
             return make_token(TOKEN_LEFT_BRACE);
         case '}':
             return make_token(TOKEN_RIGHT_BRACE);
+        case '[':
+            return make_token(TOKEN_LEFT_BRACKET);
+        case ']':
+            return make_token(TOKEN_RIGHT_BRACKET);
         case ';':
             return make_token(TOKEN_SEMICOLON);
         case ',':
@@ -382,6 +386,10 @@ const char* xen_token_type_to_str(xen_token_type type) {
             return "%=";
         case TOKEN_INCLUDE:
             return "include";
+        case TOKEN_LEFT_BRACKET:
+            return "[";
+        case TOKEN_RIGHT_BRACKET:
+            return "]";
     }
     return "";
 }
