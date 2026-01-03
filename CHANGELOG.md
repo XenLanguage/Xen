@@ -6,7 +6,7 @@
 - [v0.2.0](#v020-january-2-2026)
 - [v0.1.0](#v010-january-1-2026)
 
-## v0.4.0 (January 3, 2026) {*UNRELEASED*}
+## v0.4.0 (January 3, 2026)
 
 Xen 0.4 adds constructors, methods and properties, lambdas, and constant variable declarations. It also makes some breaking changes to the `io` namespace and adds syntactic sugar for single-line implicit return functions.
 The bulk of Xen's features have been implemented (*or at least the foundation laid*), so major updates won't be as frequent going forward. The goal
@@ -32,7 +32,6 @@ Nothing.
 
 ### Known Bugs
 - When indexing arrays, the parser doesn't recognize operations performed directly on the indexed object. For example, `my_arr[0]++` does not work. Neither does `my_arr[0]()` in an array of function elements.
-- `array.join` doesn't actually join the arrays and just returns the first array untouched.
 
 
 ## v0.3.0 (January 2, 2026)
