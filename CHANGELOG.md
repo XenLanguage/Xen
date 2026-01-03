@@ -6,19 +6,31 @@
 - [v0.2.0](#v020-january-2-2026)
 - [v0.1.0](#v010-january-1-2026)
 
-## v0.4.0 (January 3, 2026)
+## v0.4.0 (January 3, 2026) {*UNRELEASED*}
+
+Xen 0.4 adds constructors, methods and properties, and constant variable declarations. It also makes some breaking changes to the `io` namespace.
+The bulk of Xen's features have been implemented (*or at least the foundation laid*), so major updates won't be as frequent going forward. The goal
+now is to shift towards improving what's already been implemented and ensuring everything is robust before continuing to build more features.
 
 ### Added
-- Added additional methods to the `io` namespace for file reading/writing.
+- Object methods and properties (i.e, `my_string.len` or `my_array.push(69)`).
+- Additional methods to the `io` namespace for file reading (`readtxt` and `readlines`).
+- Constructors for numbers, strings, booleans, and arrays.
+- Constant variables with `const var`.
 
 ### Changed
 - Array literals have a max size of 256 elements. Arrays can be dynamically resized to any size (up to your memory limit of course).
+- `io.readline` is now `io.input` and accepts an optional string argument for prefix text.
 
 ### Removed
 Nothing.
 
 ### Fixed
 - Large numbers would print in scientific notation instead of displaying all digits. This was caused by the use of `%g` instead of `%f` in the corresponding `printf` call (see [xvalue.c](https://github.com/jakerieger/Xen/blob/master/src/xvalue.c#L94)).
+
+### Known Bugs
+- When indexing arrays, the parser doesn't recognize operations performed directly on the indexed object. For example, `my_arr[0]++` does not work. Neither does `my_arr[0]()` in an array of function elements.
+- `array.join` doesn't actually join the arrays and just returns the first array untouched.
 
 
 ## v0.3.0 (January 2, 2026)
