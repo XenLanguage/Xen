@@ -8,12 +8,14 @@
 
 ## v0.4.0 (January 3, 2026) {*UNRELEASED*}
 
-Xen 0.4 adds constructors, methods and properties, and constant variable declarations. It also makes some breaking changes to the `io` namespace.
+Xen 0.4 adds constructors, methods and properties, lambdas, and constant variable declarations. It also makes some breaking changes to the `io` namespace and adds syntactic sugar for single-line implicit return functions.
 The bulk of Xen's features have been implemented (*or at least the foundation laid*), so major updates won't be as frequent going forward. The goal
 now is to shift towards improving what's already been implemented and ensuring everything is robust before continuing to build more features.
 
 ### Added
 - Object methods and properties (i.e, `my_string.len` or `my_array.push(69)`).
+- Anonymous functions (lambdas).
+- Arrow syntax `=>` for single-line implicit return functions.
 - Additional methods to the `io` namespace for file reading (`readtxt` and `readlines`).
 - Constructors for numbers, strings, booleans, and arrays.
 - Constant variables with `const var`.
