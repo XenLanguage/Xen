@@ -127,3 +127,17 @@ while (list_one.len > 0) {
 }
 io.println("");
 io.println(list_one.len);
+
+// lambdas/anonymous functions
+
+var do_work = fn() {
+    for (var i in 0..ITERS) {
+        io.println(i);
+    }
+};
+
+do_work();
+
+fn exec(func, arg) => func(arg);
+const var exec_val = exec(fn(x) => ++x;, 10);
+io.println(exec_val);
