@@ -1,39 +1,41 @@
-println("Iteration using C-style:");
+include io;
+
+io.println("Iteration using C-style:");
 for (var i = 0; i < 10; i++) {
-    println(i);
+    io.println(i);
 }
 
-println("");
-println("Iteration with compound operators:");
+io.println("");
+io.println("Iteration with compound operators:");
 for (var i = 0; i < 100; i += 10) {
-    println(i);
+    io.println(i);
 }
 
-println("");
-println("Iteration with range-based loop:");
+io.println("");
+io.println("Iteration with range-based loop:");
 for (var i in 0..10) {
-    println(i);
+    io.println(i);
 }
 
-println("");
-println("More compound operations:");
+io.println("");
+io.println("More compound operations:");
 
 var a = 5;
-println("var a = ", a);
+io.println("var a = ", a);
 var b = a++;  // b = 5, a = 6
-println("var b = a++: ", b);
+io.println("var b = a++: ", b);
 var c = ++a;  // c = 7, a = 7
-println("var c = ++a: ", c);
+io.println("var c = ++a: ", c);
 
 var x = 10;
-println("var x = ", x);
+io.println("var x = ", x);
 x += 5;
-println("x += 5: ", x);
+io.println("x += 5: ", x);
 x -= 2;
-println("x -= 2: ", x);
+io.println("x -= 2: ", x);
 x *= 3;
-println("x *= 3: ", x);
+io.println("x *= 3: ", x);
 x /= 2;
-println("x /= 2: ", x);
+io.println("x /= 2: ", x);
 x %= 7;
-println("x %= 7: ", x);
+io.println("x %= 7: ", x);

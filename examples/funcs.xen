@@ -3,18 +3,17 @@ fn add(a, b) {
 }
 
 fn inv_mod(a, b) {
-    var i = a % b;
-    return -i;
+   return -a % -b; 
 }
 
 fn print_type_str(t) {
     var type_str = typeof(t);
-    println("Type: ", type_str);
+    io.println("Type: ", type_str);
 }
 
 var add_result = add(3, 4);
 var inv_result = inv_mod(7, 4);
 
-println("Add result: ", add_result);
-println("Inv result: ", inv_result);
+io.println("Add result: ", add_result);
+io.println("Inv result: ", inv_result);
 print_type_str(45);
