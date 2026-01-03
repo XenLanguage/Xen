@@ -2,9 +2,9 @@
 #define X_VERSION_H
 
 #define VERSION_MAJOR 0
-#define VERSION_MINOR 3
+#define VERSION_MINOR 4
 #define VERSION_PATCH 0
-#define VERSION_STRING "0.3.0"
+#define VERSION_STRING "0.4.0"
 
 #ifdef __linux
     #define PLATFORM_STRING "linux-x64"

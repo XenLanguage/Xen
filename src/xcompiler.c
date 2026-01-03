@@ -669,7 +669,16 @@ static void dot(bool can_assign) {
     XEN_UNUSED(can_assign);
     consume(TOKEN_IDENTIFIER, "expected property name after '.'");
     u8 name = identifier_constant(&parser.previous);
-    emit_bytes(OP_GET_PROPERTY, name);
+
+    if (match_token(TOKEN_LEFT_PAREN)) {
+        /* method call: obj.method(args) */
+        u8 arg_count = argument_list();
+        emit_bytes(OP_INVOKE, name);
+        emit_byte(arg_count);
+    } else {
+        /* property access: obj.property */
+        emit_bytes(OP_GET_PROPERTY, name);
+    }
 }
 
 static void array_lit(bool can_assign) {

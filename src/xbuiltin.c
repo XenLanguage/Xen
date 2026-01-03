@@ -54,31 +54,6 @@ static xen_value xen_builtin_typeof(i32 argc, xen_value* args) {
     return OBJ_VAL(xen_obj_str_copy(type_str, strlen(type_str)));
 }
 
-static xen_value xen_builtin_number(i32 argc, xen_value* args) {
-    ENFORCE_NUM_ARGS(1);
-    xen_value val = args[0];
-    if (VAL_IS_BOOL(val)) {
-        return NUMBER_VAL((i32)VAL_AS_BOOL(val));
-    } else if (VAL_IS_NULL(val)) {
-        return NUMBER_VAL(0);
-    } else if (VAL_IS_NUMBER(val)) {
-        return val;
-    } else if (VAL_IS_OBJ(val)) {
-        switch (OBJ_TYPE(val)) {
-            case OBJ_STRING: {
-                xen_obj_str* str = OBJ_AS_STRING(val);
-                f64 as_num       = strtod(str->str, NULL);
-                return NUMBER_VAL(as_num);
-            }
-            default:
-                xen_runtime_error("cannot cast 'object' to number");
-                return NULL_VAL;
-        }
-    }
-    xen_runtime_error("cannot cast 'undefined' to number");
-    return NULL_VAL;
-}
-
 void xen_builtins_register() {
     srand((u32)time(NULL));
     xen_vm_register_namespace("math", OBJ_VAL(xen_builtin_math()));
@@ -89,10 +64,6 @@ void xen_builtins_register() {
 
     /* register globals */
     define_native_fn("typeof", xen_builtin_typeof);
-
-    /* generic hack for casting to numbers. */
-    /* once everything is represented by a Xen object, this won't be necessary */
-    define_native_fn("number", xen_builtin_number);
 }
 
 void xen_vm_register_namespace(const char* name, xen_value ns) {
@@ -100,94 +71,56 @@ void xen_vm_register_namespace(const char* name, xen_value ns) {
     xen_table_set(&g_vm.namespace_registry, name_str, ns);
 }
 
-// ========================
+// ============================================================================
 // Math namespace
-// ========================
+// ============================================================================
 
 #include <math.h>
 
 static xen_value math_sqrt(i32 argc, xen_value* args) {
-    ENFORCE_NUM_ARGS(1);
-    if (!VAL_IS_NUMBER(args[0])) {
-        /* In production, set an error flag */
+    if (argc < 1 || !VAL_IS_NUMBER(args[0]))
         return NULL_VAL;
-    }
     return NUMBER_VAL(sqrt(VAL_AS_NUMBER(args[0])));
 }
 
-static xen_value math_abs(i32 argc, xen_value* args) {
-    ENFORCE_NUM_ARGS(1);
-    if (!VAL_IS_NUMBER(args[0]))
-        return NULL_VAL;
-    return NUMBER_VAL(fabs(VAL_AS_NUMBER(args[0])));
-}
-
-static xen_value math_floor(i32 argc, xen_value* args) {
-    ENFORCE_NUM_ARGS(1);
-    if (!VAL_AS_NUMBER(args[0]))
-        return NULL_VAL;
-    return NUMBER_VAL(floor(VAL_AS_NUMBER(args[0])));
-}
-
-static xen_value math_ceil(i32 argc, xen_value* args) {
-    ENFORCE_NUM_ARGS(1);
-    if (!VAL_AS_NUMBER(args[0]))
-        return NULL_VAL;
-    return NUMBER_VAL(ceil(VAL_AS_NUMBER(args[0])));
-}
-
-static xen_value math_round(i32 argc, xen_value* args) {
-    ENFORCE_NUM_ARGS(1);
-    if (!VAL_IS_NUMBER(args[0]))
-        return NULL_VAL;
-    return NUMBER_VAL(round(VAL_AS_NUMBER(args[0])));
-}
-
 static xen_value math_sin(i32 argc, xen_value* args) {
-    ENFORCE_NUM_ARGS(1);
-    if (!VAL_IS_NUMBER(args[0]))
+    if (argc < 1 || !VAL_IS_NUMBER(args[0]))
         return NULL_VAL;
     return NUMBER_VAL(sin(VAL_AS_NUMBER(args[0])));
 }
 
 static xen_value math_cos(i32 argc, xen_value* args) {
-    ENFORCE_NUM_ARGS(1);
-    if (!VAL_IS_NUMBER(args[0]))
+    if (argc < 1 || !VAL_IS_NUMBER(args[0]))
         return NULL_VAL;
     return NUMBER_VAL(cos(VAL_AS_NUMBER(args[0])));
 }
 
 static xen_value math_tan(i32 argc, xen_value* args) {
-    ENFORCE_NUM_ARGS(1);
-    if (!VAL_IS_NUMBER(args[0]))
+    if (argc < 1 || !VAL_IS_NUMBER(args[0]))
         return NULL_VAL;
     return NUMBER_VAL(tan(VAL_AS_NUMBER(args[0])));
 }
 
 static xen_value math_pow(i32 argc, xen_value* args) {
-    ENFORCE_NUM_ARGS(2);
-    if (!VAL_IS_NUMBER(args[0]) || !VAL_IS_NUMBER(args[1]))
+    if (argc < 2 || !VAL_IS_NUMBER(args[0]) || !VAL_IS_NUMBER(args[1]))
         return NULL_VAL;
     return NUMBER_VAL(pow(VAL_AS_NUMBER(args[0]), VAL_AS_NUMBER(args[1])));
 }
 
 static xen_value math_log(i32 argc, xen_value* args) {
-    ENFORCE_NUM_ARGS(1);
-    if (!VAL_IS_NUMBER(args[0]))
+    if (argc < 1 || !VAL_IS_NUMBER(args[0]))
         return NULL_VAL;
     return NUMBER_VAL(log(VAL_AS_NUMBER(args[0])));
 }
 
 static xen_value math_log10(i32 argc, xen_value* args) {
-    ENFORCE_NUM_ARGS(1);
-    if (!VAL_IS_NUMBER(args[0]))
+    if (argc < 1 || !VAL_IS_NUMBER(args[0]))
         return NULL_VAL;
     return NUMBER_VAL(log10(VAL_AS_NUMBER(args[0])));
 }
 
 static xen_value math_exp(i32 argc, xen_value* args) {
-    ENFORCE_NUM_ARGS(1);
-    if (!VAL_IS_NUMBER(args[0]))
+    if (argc < 1 || !VAL_IS_NUMBER(args[0]))
         return NULL_VAL;
     return NUMBER_VAL(exp(VAL_AS_NUMBER(args[0])));
 }
@@ -229,10 +162,10 @@ static xen_value math_random(i32 argc, xen_value* args) {
 xen_obj_namespace* xen_builtin_math() {
     xen_obj_namespace* math = xen_obj_namespace_new("math");
     xen_obj_namespace_set(math, "sqrt", OBJ_VAL(xen_obj_native_func_new(math_sqrt, "sqrt")));
-    xen_obj_namespace_set(math, "abs", OBJ_VAL(xen_obj_native_func_new(math_abs, "abs")));
-    xen_obj_namespace_set(math, "floor", OBJ_VAL(xen_obj_native_func_new(math_floor, "floor")));
-    xen_obj_namespace_set(math, "ceil", OBJ_VAL(xen_obj_native_func_new(math_ceil, "ceil")));
-    xen_obj_namespace_set(math, "round", OBJ_VAL(xen_obj_native_func_new(math_round, "round")));
+    xen_obj_namespace_set(math, "abs", OBJ_VAL(xen_obj_native_func_new(xen_num_abs, "abs")));
+    xen_obj_namespace_set(math, "floor", OBJ_VAL(xen_obj_native_func_new(xen_num_floor, "floor")));
+    xen_obj_namespace_set(math, "ceil", OBJ_VAL(xen_obj_native_func_new(xen_num_ceil, "ceil")));
+    xen_obj_namespace_set(math, "round", OBJ_VAL(xen_obj_native_func_new(xen_num_round, "round")));
     xen_obj_namespace_set(math, "sin", OBJ_VAL(xen_obj_native_func_new(math_sin, "sin")));
     xen_obj_namespace_set(math, "cos", OBJ_VAL(xen_obj_native_func_new(math_cos, "cos")));
     xen_obj_namespace_set(math, "tan", OBJ_VAL(xen_obj_native_func_new(math_tan, "tan")));
@@ -249,27 +182,21 @@ xen_obj_namespace* xen_builtin_math() {
     return math;
 }
 
-// ========================
+// ============================================================================
 // IO namespace
-// ========================
+// ============================================================================
 
 static xen_value io_println(i32 argc, xen_value* args) {
-    if (argc == 0) {
-        xen_runtime_error("io.println() requires at least one argument");
-        return NULL_VAL;
-    }
     for (i32 i = 0; i < argc; i++) {
         xen_value_print(args[i]);
+        if (i < argc - 1)
+            printf(" ");
     }
     printf("\n");
     return NULL_VAL;
 }
 
 static xen_value io_print(i32 argc, xen_value* args) {
-    if (argc == 0) {
-        xen_runtime_error("io.print() requires at least one argument");
-        return NULL_VAL;
-    }
     for (i32 i = 0; i < argc; i++) {
         xen_value_print(args[i]);
     }
@@ -277,14 +204,10 @@ static xen_value io_print(i32 argc, xen_value* args) {
 }
 
 static xen_value io_readline(i32 argc, xen_value* args) {
-    if (argc != 0) {
-        xen_runtime_error("io_readline() doesn't take any arguments");
-        /* this doesn't actually cause any problems so continue as normal */
-    }
-    XEN_UNUSED(args);
+    (void)argc;
+    (void)args;
     char buffer[1024];
     if (fgets(buffer, sizeof(buffer), stdin)) {
-        /* remove trailing newline */
         size_t len = strlen(buffer);
         if (len > 0 && buffer[len - 1] == '\n') {
             buffer[len - 1] = '\0';
@@ -295,39 +218,6 @@ static xen_value io_readline(i32 argc, xen_value* args) {
     return NULL_VAL;
 }
 
-/*
- * Signature: fn io::readbinary(string filename) -> number[]
- */
-static xen_value io_readbinary(i32 argc, xen_value* args) {
-    ENFORCE_NUM_ARGS(1);
-    if (!OBJ_IS_STRING(args[0])) {
-        xen_runtime_error("filename must be a string");
-        return NULL_VAL;
-    }
-
-    xen_obj_str* filename = OBJ_AS_STRING(args[0]);
-    FILE* fp              = fopen(filename->str, "rb");
-
-    if (!fp) {
-        xen_runtime_error("failed to open file: %s", filename->str);
-        return NULL_VAL;
-    }
-
-    fseek(fp, 0, SEEK_END);
-    i32 size = ftell(fp);
-    fseek(fp, 0, SEEK_SET);
-
-    u8* buffer = (u8*)malloc(size);
-
-    size_t read_bytes  = fread(buffer, 1, size, fp);
-    buffer[read_bytes] = '\0';
-    fclose(fp);
-
-    xen_obj_array* byte_arr = xen_obj_array_new_with_capacity(size);
-    /* TODO: Implement a proper data structure */
-    return OBJ_VAL(byte_arr);
-}
-
 xen_obj_namespace* xen_builtin_io() {
     xen_obj_namespace* io = xen_obj_namespace_new("io");
     xen_obj_namespace_set(io, "println", OBJ_VAL(xen_obj_native_func_new(io_println, "println")));
@@ -336,18 +226,18 @@ xen_obj_namespace* xen_builtin_io() {
     return io;
 }
 
-// ========================
-// String namespace
-// ========================
+// ============================================================================
+// String methods (exposed for type methods)
+// ============================================================================
 
-static xen_value string_len(i32 argc, xen_value* args) {
-    if (argc != 1 || !OBJ_IS_STRING(args[0]))
+xen_value xen_str_len(i32 argc, xen_value* args) {
+    if (argc < 1 || !OBJ_IS_STRING(args[0]))
         return NULL_VAL;
     return NUMBER_VAL(OBJ_AS_STRING(args[0])->length);
 }
 
-static xen_value string_upper(i32 argc, xen_value* args) {
-    if (argc != 1 || !OBJ_IS_STRING(args[0]))
+xen_value xen_str_upper(i32 argc, xen_value* args) {
+    if (argc < 1 || !OBJ_IS_STRING(args[0]))
         return NULL_VAL;
     xen_obj_str* str = OBJ_AS_STRING(args[0]);
     char* buffer     = malloc(str->length + 1);
@@ -355,12 +245,11 @@ static xen_value string_upper(i32 argc, xen_value* args) {
         buffer[i] = toupper(str->str[i]);
     }
     buffer[str->length] = '\0';
-    xen_obj_str* result = xen_obj_str_take(buffer, str->length);
-    return OBJ_VAL(result);
+    return OBJ_VAL(xen_obj_str_take(buffer, str->length));
 }
 
-static xen_value string_lower(i32 argc, xen_value* args) {
-    if (argc != 1 || !OBJ_IS_STRING(args[0]))
+xen_value xen_str_lower(i32 argc, xen_value* args) {
+    if (argc < 1 || !OBJ_IS_STRING(args[0]))
         return NULL_VAL;
     xen_obj_str* str = OBJ_AS_STRING(args[0]);
     char* buffer     = malloc(str->length + 1);
@@ -368,11 +257,56 @@ static xen_value string_lower(i32 argc, xen_value* args) {
         buffer[i] = tolower(str->str[i]);
     }
     buffer[str->length] = '\0';
-    xen_obj_str* result = xen_obj_str_take(buffer, str->length);
-    return OBJ_VAL(result);
+    return OBJ_VAL(xen_obj_str_take(buffer, str->length));
 }
 
-static xen_value string_substr(i32 argc, xen_value* args) {
+xen_value xen_str_trim(i32 argc, xen_value* args) {
+    if (argc < 1 || !OBJ_IS_STRING(args[0]))
+        return NULL_VAL;
+    xen_obj_str* str = OBJ_AS_STRING(args[0]);
+
+    const char* start = str->str;
+    const char* end   = str->str + str->length - 1;
+
+    while (start <= end && isspace(*start))
+        start++;
+    while (end > start && isspace(*end))
+        end--;
+
+    i32 new_len = (i32)(end - start + 1);
+    return OBJ_VAL(xen_obj_str_copy(start, new_len));
+}
+
+xen_value xen_str_contains(i32 argc, xen_value* args) {
+    if (argc < 2 || !OBJ_IS_STRING(args[0]) || !OBJ_IS_STRING(args[1]))
+        return BOOL_VAL(XEN_FALSE);
+    xen_obj_str* haystack = OBJ_AS_STRING(args[0]);
+    xen_obj_str* needle   = OBJ_AS_STRING(args[1]);
+    return BOOL_VAL(strstr(haystack->str, needle->str) != NULL);
+}
+
+xen_value xen_str_starts_with(i32 argc, xen_value* args) {
+    if (argc < 2 || !OBJ_IS_STRING(args[0]) || !OBJ_IS_STRING(args[1]))
+        return BOOL_VAL(XEN_FALSE);
+    xen_obj_str* str    = OBJ_AS_STRING(args[0]);
+    xen_obj_str* prefix = OBJ_AS_STRING(args[1]);
+    if (prefix->length > str->length)
+        return BOOL_VAL(XEN_FALSE);
+    return BOOL_VAL(memcmp(str->str, prefix->str, prefix->length) == 0);
+}
+
+xen_value xen_str_ends_with(i32 argc, xen_value* args) {
+    if (argc < 2 || !OBJ_IS_STRING(args[0]) || !OBJ_IS_STRING(args[1]))
+        return BOOL_VAL(XEN_FALSE);
+    xen_obj_str* str    = OBJ_AS_STRING(args[0]);
+    xen_obj_str* suffix = OBJ_AS_STRING(args[1]);
+    if (suffix->length > str->length)
+        return BOOL_VAL(XEN_FALSE);
+    const char* start = str->str + str->length - suffix->length;
+    return BOOL_VAL(memcmp(start, suffix->str, suffix->length) == 0);
+}
+
+xen_value xen_str_substr(i32 argc, xen_value* args) {
     if (argc < 2 || !OBJ_IS_STRING(args[0]) || !VAL_IS_NUMBER(args[1]))
         return NULL_VAL;
 
@@ -390,8 +324,8 @@ static xen_value string_substr(i32 argc, xen_value* args) {
     return OBJ_VAL(xen_obj_str_copy(str->str + start, len));
 }
 
-static xen_value string_find(i32 argc, xen_value* args) {
-    if (argc != 2 || !OBJ_IS_STRING(args[0]) || !OBJ_IS_STRING(args[1]))
+xen_value xen_str_find(i32 argc, xen_value* args) {
+    if (argc < 2 || !OBJ_IS_STRING(args[0]) || !OBJ_IS_STRING(args[1]))
         return NUMBER_VAL(-1);
 
     xen_obj_str* haystack = OBJ_AS_STRING(args[0]);
@@ -404,135 +338,98 @@ static xen_value string_find(i32 argc, xen_value* args) {
     return NUMBER_VAL(-1);
 }
 
-static xen_value string_split(i32 argc, xen_value* args) {
-    // This would return an array - you'd need arrays first
-    // For now, return null as placeholder
-    (void)argc;
-    (void)args;
-    return NULL_VAL;
-}
-
-static xen_value string_trim(i32 argc, xen_value* args) {
-    if (argc != 1 || !OBJ_IS_STRING(args[0]))
+xen_value xen_str_split(i32 argc, xen_value* args) {
+    if (argc < 2 || !OBJ_IS_STRING(args[0]) || !OBJ_IS_STRING(args[1]))
         return NULL_VAL;
 
-    xen_obj_str* str  = OBJ_AS_STRING(args[0]);
+    xen_obj_str* str   = OBJ_AS_STRING(args[0]);
+    xen_obj_str* delim = OBJ_AS_STRING(args[1]);
+
+    xen_obj_array* result = xen_obj_array_new();
+
+    if (delim->length == 0) {
+        for (i32 i = 0; i < str->length; i++) {
+            xen_obj_array_push(result, OBJ_VAL(xen_obj_str_copy(&str->str[i], 1)));
+        }
+        return OBJ_VAL(result);
+    }
+
     const char* start = str->str;
-    const char* end   = str->str + str->length - 1;
+    const char* end   = str->str + str->length;
+    const char* pos;
 
-    while (start <= end && isspace(*start))
-        start++;
-    while (end > start && isspace(*end))
-        end--;
-
-    i32 new_len = (i32)(end - start + 1);
-    return OBJ_VAL(xen_obj_str_copy(start, new_len));
-}
-
-static xen_value string_contains(i32 argc, xen_value* args) {
-    if (argc != 2 || !OBJ_IS_STRING(args[0]) || !OBJ_IS_STRING(args[1]))
-        return BOOL_VAL(XEN_FALSE);
-
-    xen_obj_str* haystack = OBJ_AS_STRING(args[0]);
-    xen_obj_str* needle   = OBJ_AS_STRING(args[1]);
-
-    return BOOL_VAL(strstr(haystack->str, needle->str) != NULL);
-}
-
-static xen_value string_starts_with(i32 argc, xen_value* args) {
-    if (argc != 2 || !OBJ_IS_STRING(args[0]) || !OBJ_IS_STRING(args[1]))
-        return BOOL_VAL(XEN_FALSE);
-
-    xen_obj_str* str    = OBJ_AS_STRING(args[0]);
-    xen_obj_str* prefix = OBJ_AS_STRING(args[1]);
-
-    if (prefix->length > str->length)
-        return BOOL_VAL(XEN_FALSE);
-    return BOOL_VAL(memcmp(str->str, prefix->str, prefix->length) == 0);
-}
-
-static xen_value string_ends_with(i32 argc, xen_value* args) {
-    if (argc != 2 || !OBJ_IS_STRING(args[0]) || !OBJ_IS_STRING(args[1]))
-        return BOOL_VAL(XEN_FALSE);
-
-    xen_obj_str* str    = OBJ_AS_STRING(args[0]);
-    xen_obj_str* suffix = OBJ_AS_STRING(args[1]);
-
-    if (suffix->length > str->length)
-        return BOOL_VAL(XEN_FALSE);
-    const char* start = str->str + str->length - suffix->length;
-    return BOOL_VAL(memcmp(start, suffix->str, suffix->length) == 0);
-}
-
-static xen_value string_join(i32 argc, xen_value* args) {
-    if (argc <= 1) {
-        xen_runtime_error("string.join() requires at least two arguments.");
-        return NULL_VAL;
+    while ((pos = strstr(start, delim->str)) != NULL) {
+        i32 len = (i32)(pos - start);
+        xen_obj_array_push(result, OBJ_VAL(xen_obj_str_copy(start, len)));
+        start = pos + delim->length;
     }
 
-    size_t size_needed = 0;
-    for (int i = 0; i < argc; i++) {
-        xen_value val = args[i];
-        if (!OBJ_IS_STRING(val)) {
-            xen_runtime_error("all arguments of string.join() must be strings");
-            return NULL_VAL;
-        }
-        size_needed += OBJ_AS_STRING(val)->length;
+    if (start < end) {
+        xen_obj_array_push(result, OBJ_VAL(xen_obj_str_copy(start, (i32)(end - start))));
     }
 
-    char* buffer = (char*)malloc(size_needed + 1);
-    if (!buffer) {
-        xen_runtime_error("couldn't allocate string buffer for joining");
-        return NULL_VAL;
-    }
-
-    int offset = 0;
-    for (int i = 0; i < argc; i++) {
-        if (offset > size_needed) {
-            xen_runtime_error("offset > buffer size in string join buffer");
-            break;
-        }
-        xen_obj_str* val = OBJ_AS_STRING(args[i]);
-        memcpy(buffer + offset, val->str, val->length);
-        offset += val->length;
-    }
-
-    buffer[size_needed] = '\0';
-    xen_value out       = OBJ_VAL(xen_obj_str_take(buffer, size_needed + 1));
-
-    return out;
+    return OBJ_VAL(result);
 }
 
-static xen_value string_at(i32 argc, xen_value* args) {
-    /* TODO: */
-    return NULL_VAL;
-}
+xen_value xen_str_replace(i32 argc, xen_value* args) {
+    if (argc < 3 || !OBJ_IS_STRING(args[0]) || !OBJ_IS_STRING(args[1]) || !OBJ_IS_STRING(args[2]))
+        return args[0];
 
-static xen_value string_format(i32 argc, xen_value* args) {
-    /* TODO: */
-    return NULL_VAL;
+    xen_obj_str* str     = OBJ_AS_STRING(args[0]);
+    xen_obj_str* find    = OBJ_AS_STRING(args[1]);
+    xen_obj_str* replace = OBJ_AS_STRING(args[2]);
+
+    if (find->length == 0)
+        return args[0];
+
+    i32 count       = 0;
+    const char* pos = str->str;
+    while ((pos = strstr(pos, find->str)) != NULL) {
+        count++;
+        pos += find->length;
+    }
+
+    if (count == 0)
+        return args[0];
+
+    i32 new_len  = str->length + count * (replace->length - find->length);
+    char* buffer = malloc(new_len + 1);
+    char* dest   = buffer;
+
+    const char* src = str->str;
+    while ((pos = strstr(src, find->str)) != NULL) {
+        i32 prefix_len = (i32)(pos - src);
+        memcpy(dest, src, prefix_len);
+        dest += prefix_len;
+        memcpy(dest, replace->str, replace->length);
+        dest += replace->length;
+        src = pos + find->length;
+    }
+
+    strcpy(dest, src);
+
+    return OBJ_VAL(xen_obj_str_take(buffer, new_len));
 }
 
 xen_obj_namespace* xen_builtin_string() {
     xen_obj_namespace* str = xen_obj_namespace_new("string");
-    xen_obj_namespace_set(str, "len", OBJ_VAL(xen_obj_native_func_new(string_len, "len")));
-    xen_obj_namespace_set(str, "upper", OBJ_VAL(xen_obj_native_func_new(string_upper, "upper")));
-    xen_obj_namespace_set(str, "lower", OBJ_VAL(xen_obj_native_func_new(string_lower, "lower")));
-    xen_obj_namespace_set(str, "substr", OBJ_VAL(xen_obj_native_func_new(string_substr, "substr")));
-    xen_obj_namespace_set(str, "find", OBJ_VAL(xen_obj_native_func_new(string_find, "find")));
-    xen_obj_namespace_set(str, "trim", OBJ_VAL(xen_obj_native_func_new(string_trim, "trim")));
-    xen_obj_namespace_set(str, "contains", OBJ_VAL(xen_obj_native_func_new(string_contains, "contains")));
-    xen_obj_namespace_set(str, "starts_with", OBJ_VAL(xen_obj_native_func_new(string_starts_with, "starts_with")));
-    xen_obj_namespace_set(str, "ends_with", OBJ_VAL(xen_obj_native_func_new(string_ends_with, "ends_with")));
-    xen_obj_namespace_set(str, "join", OBJ_VAL(xen_obj_native_func_new(string_join, "join")));
-    // xen_obj_namespace_set(str, "at", OBJ_VAL(xen_obj_native_func_new(string_at, "at")));
-    // xen_obj_namespace_set(str, "format", OBJ_VAL(xen_obj_native_func_new(string_format, "format")));
+    xen_obj_namespace_set(str, "len", OBJ_VAL(xen_obj_native_func_new(xen_str_len, "len")));
+    xen_obj_namespace_set(str, "upper", OBJ_VAL(xen_obj_native_func_new(xen_str_upper, "upper")));
+    xen_obj_namespace_set(str, "lower", OBJ_VAL(xen_obj_native_func_new(xen_str_lower, "lower")));
+    xen_obj_namespace_set(str, "substr", OBJ_VAL(xen_obj_native_func_new(xen_str_substr, "substr")));
+    xen_obj_namespace_set(str, "find", OBJ_VAL(xen_obj_native_func_new(xen_str_find, "find")));
+    xen_obj_namespace_set(str, "trim", OBJ_VAL(xen_obj_native_func_new(xen_str_trim, "trim")));
+    xen_obj_namespace_set(str, "contains", OBJ_VAL(xen_obj_native_func_new(xen_str_contains, "contains")));
+    xen_obj_namespace_set(str, "starts_with", OBJ_VAL(xen_obj_native_func_new(xen_str_starts_with, "starts_with")));
+    xen_obj_namespace_set(str, "ends_with", OBJ_VAL(xen_obj_native_func_new(xen_str_ends_with, "ends_with")));
+    xen_obj_namespace_set(str, "split", OBJ_VAL(xen_obj_native_func_new(xen_str_split, "split")));
+    xen_obj_namespace_set(str, "replace", OBJ_VAL(xen_obj_native_func_new(xen_str_replace, "replace")));
     return str;
 }
 
-// ========================
+// ============================================================================
 // Time namespace
-// ========================
+// ============================================================================
 
 static xen_value time_now(i32 argc, xen_value* args) {
     (void)argc;
@@ -553,20 +450,19 @@ xen_obj_namespace* xen_builtin_datetime() {
     return t;
 }
 
-// ========================
-// Array namespace
-// ========================
+// ============================================================================
+// Array methods (exposed for type methods)
+// ============================================================================
 
-static xen_value array_len(i32 argc, xen_value* args) {
-    if (argc != 1 || !OBJ_IS_ARRAY(args[0]))
+xen_value xen_arr_len(i32 argc, xen_value* args) {
+    if (argc < 1 || !OBJ_IS_ARRAY(args[0]))
         return NUMBER_VAL(-1);
     return NUMBER_VAL(OBJ_AS_ARRAY(args[0])->array.count);
 }
 
-static xen_value array_push(i32 argc, xen_value* args) {
+xen_value xen_arr_push(i32 argc, xen_value* args) {
     if (argc < 2 || !OBJ_IS_ARRAY(args[0]))
         return NULL_VAL;
-
     xen_obj_array* arr = OBJ_AS_ARRAY(args[0]);
     for (i32 i = 1; i < argc; i++) {
         xen_obj_array_push(arr, args[i]);
@@ -574,50 +470,42 @@ static xen_value array_push(i32 argc, xen_value* args) {
     return NUMBER_VAL(arr->array.count);
 }
 
-static xen_value array_pop(i32 argc, xen_value* args) {
-    if (argc != 1 || !OBJ_IS_ARRAY(args[0]))
+xen_value xen_arr_pop(i32 argc, xen_value* args) {
+    if (argc < 1 || !OBJ_IS_ARRAY(args[0]))
         return NULL_VAL;
-
-    xen_obj_array* arr = OBJ_AS_ARRAY(args[0]);
-    return xen_obj_array_pop(arr);
+    return xen_obj_array_pop(OBJ_AS_ARRAY(args[0]));
 }
 
-static xen_value array_first(i32 argc, xen_value* args) {
-    if (argc != 1 || !OBJ_IS_ARRAY(args[0]))
+xen_value xen_arr_first(i32 argc, xen_value* args) {
+    if (argc < 1 || !OBJ_IS_ARRAY(args[0]))
         return NULL_VAL;
-
     xen_obj_array* arr = OBJ_AS_ARRAY(args[0]);
     if (arr->array.count == 0)
         return NULL_VAL;
     return arr->array.values[0];
 }
 
-static xen_value array_last(i32 argc, xen_value* args) {
-    if (argc != 1 || !OBJ_IS_ARRAY(args[0]))
+xen_value xen_arr_last(i32 argc, xen_value* args) {
+    if (argc < 1 || !OBJ_IS_ARRAY(args[0]))
         return NULL_VAL;
-
     xen_obj_array* arr = OBJ_AS_ARRAY(args[0]);
     if (arr->array.count == 0)
         return NULL_VAL;
     return arr->array.values[arr->array.count - 1];
 }
 
-static xen_value array_clear(i32 argc, xen_value* args) {
-    if (argc != 1 || !OBJ_IS_ARRAY(args[0]))
+xen_value xen_arr_clear(i32 argc, xen_value* args) {
+    if (argc < 1 || !OBJ_IS_ARRAY(args[0]))
         return NULL_VAL;
-
-    xen_obj_array* arr = OBJ_AS_ARRAY(args[0]);
-    arr->array.count   = 0;
+    OBJ_AS_ARRAY(args[0])->array.count = 0;
     return NULL_VAL;
 }
 
-static xen_value array_contains(i32 argc, xen_value* args) {
-    if (argc != 2 || !OBJ_IS_ARRAY(args[0]))
+xen_value xen_arr_contains(i32 argc, xen_value* args) {
+    if (argc < 2 || !OBJ_IS_ARRAY(args[0]))
         return BOOL_VAL(XEN_FALSE);
-
     xen_obj_array* arr = OBJ_AS_ARRAY(args[0]);
     xen_value needle   = args[1];
-
     for (i32 i = 0; i < arr->array.count; i++) {
         if (xen_value_equal(arr->array.values[i], needle)) {
             return BOOL_VAL(XEN_TRUE);
@@ -626,13 +514,11 @@ static xen_value array_contains(i32 argc, xen_value* args) {
     return BOOL_VAL(XEN_FALSE);
 }
 
-static xen_value array_index_of(i32 argc, xen_value* args) {
-    if (argc != 2 || !OBJ_IS_ARRAY(args[0]))
+xen_value xen_arr_index_of(i32 argc, xen_value* args) {
+    if (argc < 2 || !OBJ_IS_ARRAY(args[0]))
         return NUMBER_VAL(-1);
-
     xen_obj_array* arr = OBJ_AS_ARRAY(args[0]);
     xen_value needle   = args[1];
-
     for (i32 i = 0; i < arr->array.count; i++) {
         if (xen_value_equal(arr->array.values[i], needle)) {
             return NUMBER_VAL(i);
@@ -641,31 +527,26 @@ static xen_value array_index_of(i32 argc, xen_value* args) {
     return NUMBER_VAL(-1);
 }
 
-static xen_value array_reverse(i32 argc, xen_value* args) {
-    if (argc != 1 || !OBJ_IS_ARRAY(args[0]))
+xen_value xen_arr_reverse(i32 argc, xen_value* args) {
+    if (argc < 1 || !OBJ_IS_ARRAY(args[0]))
         return NULL_VAL;
-
     xen_obj_array* arr = OBJ_AS_ARRAY(args[0]);
-
     for (i32 i = 0; i < arr->array.count / 2; i++) {
         i32 j                = arr->array.count - 1 - i;
         xen_value temp       = arr->array.values[i];
         arr->array.values[i] = arr->array.values[j];
         arr->array.values[j] = temp;
     }
-
-    return args[0]; /* Return the array for chaining */
+    return args[0];
 }
 
-static xen_value array_join(i32 argc, xen_value* args) {
+xen_value xen_arr_join(i32 argc, xen_value* args) {
     if (argc < 1 || !OBJ_IS_ARRAY(args[0]))
         return NULL_VAL;
 
     xen_obj_array* arr = OBJ_AS_ARRAY(args[0]);
-
-    /* Default separator is comma */
-    const char* sep = ",";
-    i32 sep_len     = 1;
+    const char* sep    = ",";
+    i32 sep_len        = 1;
 
     if (argc >= 2 && OBJ_IS_STRING(args[1])) {
         xen_obj_str* sep_str = OBJ_AS_STRING(args[1]);
@@ -677,17 +558,16 @@ static xen_value array_join(i32 argc, xen_value* args) {
         return OBJ_VAL(xen_obj_str_copy("", 0));
     }
 
-    /* Calculate total length needed */
     i32 total_len = 0;
     for (i32 i = 0; i < arr->array.count; i++) {
         if (OBJ_IS_STRING(arr->array.values[i])) {
             total_len += OBJ_AS_STRING(arr->array.values[i])->length;
         } else if (VAL_IS_NUMBER(arr->array.values[i])) {
-            total_len += 20; /* Estimate for number */
+            total_len += 20;
         } else if (VAL_IS_BOOL(arr->array.values[i])) {
-            total_len += 5; /* "true" or "false" */
+            total_len += 5;
         } else if (VAL_IS_NULL(arr->array.values[i])) {
-            total_len += 4; /* "null" */
+            total_len += 4;
         }
         if (i < arr->array.count - 1) {
             total_len += sep_len;
@@ -721,21 +601,56 @@ static xen_value array_join(i32 argc, xen_value* args) {
     }
     *ptr = '\0';
 
-    xen_obj_str* result = xen_obj_str_take(buffer, (i32)(ptr - buffer));
-    return OBJ_VAL(result);
+    return OBJ_VAL(xen_obj_str_take(buffer, (i32)(ptr - buffer)));
 }
 
 xen_obj_namespace* xen_builtin_array() {
     xen_obj_namespace* arr = xen_obj_namespace_new("array");
-    xen_obj_namespace_set(arr, "len", OBJ_VAL(xen_obj_native_func_new(array_len, "len")));
-    xen_obj_namespace_set(arr, "push", OBJ_VAL(xen_obj_native_func_new(array_push, "push")));
-    xen_obj_namespace_set(arr, "pop", OBJ_VAL(xen_obj_native_func_new(array_pop, "pop")));
-    xen_obj_namespace_set(arr, "first", OBJ_VAL(xen_obj_native_func_new(array_first, "first")));
-    xen_obj_namespace_set(arr, "last", OBJ_VAL(xen_obj_native_func_new(array_last, "last")));
-    xen_obj_namespace_set(arr, "clear", OBJ_VAL(xen_obj_native_func_new(array_clear, "clear")));
-    xen_obj_namespace_set(arr, "contains", OBJ_VAL(xen_obj_native_func_new(array_contains, "contains")));
-    xen_obj_namespace_set(arr, "index_of", OBJ_VAL(xen_obj_native_func_new(array_index_of, "index_of")));
-    xen_obj_namespace_set(arr, "reverse", OBJ_VAL(xen_obj_native_func_new(array_reverse, "reverse")));
-    xen_obj_namespace_set(arr, "join", OBJ_VAL(xen_obj_native_func_new(array_join, "join")));
+    xen_obj_namespace_set(arr, "len", OBJ_VAL(xen_obj_native_func_new(xen_arr_len, "len")));
+    xen_obj_namespace_set(arr, "push", OBJ_VAL(xen_obj_native_func_new(xen_arr_push, "push")));
+    xen_obj_namespace_set(arr, "pop", OBJ_VAL(xen_obj_native_func_new(xen_arr_pop, "pop")));
+    xen_obj_namespace_set(arr, "first", OBJ_VAL(xen_obj_native_func_new(xen_arr_first, "first")));
+    xen_obj_namespace_set(arr, "last", OBJ_VAL(xen_obj_native_func_new(xen_arr_last, "last")));
+    xen_obj_namespace_set(arr, "clear", OBJ_VAL(xen_obj_native_func_new(xen_arr_clear, "clear")));
+    xen_obj_namespace_set(arr, "contains", OBJ_VAL(xen_obj_native_func_new(xen_arr_contains, "contains")));
+    xen_obj_namespace_set(arr, "index_of", OBJ_VAL(xen_obj_native_func_new(xen_arr_index_of, "index_of")));
+    xen_obj_namespace_set(arr, "reverse", OBJ_VAL(xen_obj_native_func_new(xen_arr_reverse, "reverse")));
+    xen_obj_namespace_set(arr, "join", OBJ_VAL(xen_obj_native_func_new(xen_arr_join, "join")));
     return arr;
+}
+
+// ============================================================================
+// Number methods (exposed for type methods)
+// ============================================================================
+
+xen_value xen_num_abs(i32 argc, xen_value* args) {
+    if (argc < 1 || !VAL_IS_NUMBER(args[0]))
+        return NULL_VAL;
+    return NUMBER_VAL(fabs(VAL_AS_NUMBER(args[0])));
+}
+
+xen_value xen_num_floor(i32 argc, xen_value* args) {
+    if (argc < 1 || !VAL_IS_NUMBER(args[0]))
+        return NULL_VAL;
+    return NUMBER_VAL(floor(VAL_AS_NUMBER(args[0])));
+}
+
+xen_value xen_num_ceil(i32 argc, xen_value* args) {
+    if (argc < 1 || !VAL_IS_NUMBER(args[0]))
+        return NULL_VAL;
+    return NUMBER_VAL(ceil(VAL_AS_NUMBER(args[0])));
+}
+
+xen_value xen_num_round(i32 argc, xen_value* args) {
+    if (argc < 1 || !VAL_IS_NUMBER(args[0]))
+        return NULL_VAL;
+    return NUMBER_VAL(round(VAL_AS_NUMBER(args[0])));
+}
+
+xen_value xen_num_to_string(i32 argc, xen_value* args) {
+    if (argc < 1 || !VAL_IS_NUMBER(args[0]))
+        return NULL_VAL;
+    char buffer[32];
+    i32 len = snprintf(buffer, sizeof(buffer), "%g", VAL_AS_NUMBER(args[0]));
+    return OBJ_VAL(xen_obj_str_copy(buffer, len));
 }

@@ -109,3 +109,30 @@ void xen_value_print(xen_value value) {
             return;  // Unreachable
     }
 }
+
+char* xen_value_type_to_str(xen_value value) {
+    switch (value.type) {
+        case VAL_BOOL:
+            return "bool";
+        case VAL_NULL:
+            return "null";
+        case VAL_NUMBER:
+            return "number";
+        case VAL_OBJECT: {
+            if (OBJ_IS_STRING(value)) {
+                return "string";
+            } else if (OBJ_IS_FUNCTION(value)) {
+                return "function";
+            } else if (OBJ_IS_NATIVE_FUNC(value)) {
+                return "native_function";
+            } else if (OBJ_IS_NAMESPACE(value)) {
+                return "namespace";
+            } else if (OBJ_IS_ARRAY(value)) {
+                return "array";
+            } else if (OBJ_IS_BOUND_METHOD(value)) {
+                return "bound_method";
+            }
+        }
+    }
+    return NULL;
+}

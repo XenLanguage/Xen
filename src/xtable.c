@@ -15,7 +15,7 @@ void xen_table_free(xen_table* table) {
 }
 
 static xen_table_entry* find_entry(xen_table_entry* entries, i32 capacity, xen_obj_str* key) {
-    u32 index                 = key->hash % capacity;
+    u32 index                  = key->hash % capacity;
     xen_table_entry* tombstone = NULL;
 
     for (;;) {
@@ -47,8 +47,8 @@ static void adjust_capacity(xen_table* table, i32 capacity) {
         const xen_table_entry* entry = &table->entries[i];
         if (entry->key != NULL) {
             xen_table_entry* dst = find_entry(entries, capacity, entry->key);
-            dst->key            = entry->key;
-            dst->value          = entry->value;
+            dst->key             = entry->key;
+            dst->value           = entry->value;
             // Each time we find a non-tombstone entry, we increment count
             table->count++;
         }
@@ -78,7 +78,7 @@ bool xen_table_set(xen_table* table, xen_obj_str* key, xen_value value) {
     }
 
     xen_table_entry* entry = find_entry(table->entries, table->capacity, key);
-    const bool is_new_key = entry->key == NULL;
+    const bool is_new_key  = entry->key == NULL;
 
     // Include tombstones in our count
     if (is_new_key && VAL_IS_NULL(entry->value))

@@ -195,8 +195,7 @@ static xen_exec_result run() {
             case OP_FALSE: {
                 stack_push(BOOL_VAL(XEN_FALSE));
                 break;
-            }  //====================================================================================================================//
-
+            }
             case OP_EQUAL: {
                 xen_value b = stack_pop();
                 xen_value a = stack_pop();
@@ -342,26 +341,85 @@ static xen_exec_result run() {
             case OP_GET_PROPERTY: {
                 xen_obj_str* name = OBJ_AS_STRING(READ_CONSTANT());
                 xen_value obj_val = peek(0);
-                if (!VAL_IS_OBJ(obj_val)) {
-                    runtime_error("only objects have properties");
-                    return EXEC_RUNTIME_ERROR;
-                }
-                xen_obj* obj = VAL_AS_OBJ(obj_val);
-                if (obj->type == OBJ_NAMESPACE) {
-                    xen_obj_namespace* ns = (xen_obj_namespace*)obj;
+
+                /* Check for namespace property access */
+                if (VAL_IS_OBJ(obj_val) && OBJ_TYPE(obj_val) == OBJ_NAMESPACE) {
+                    xen_obj_namespace* ns = OBJ_AS_NAMESPACE(obj_val);
                     xen_value result;
                     if (xen_obj_namespace_get(ns, name->str, &result)) {
-                        stack_pop();        /* pop the namespace */
-                        stack_push(result); /* push the property value */
+                        stack_pop();
+                        stack_push(result);
                     } else {
-                        runtime_error("undefined property '%s' in namespace '%s'");
+                        runtime_error("undefined property '%s' in namespace '%s'", name->str, ns->name);
                         return EXEC_RUNTIME_ERROR;
                     }
-                } else {
-                    runtime_error("object does not support property access");
-                    return EXEC_RUNTIME_ERROR;
+                    break;
                 }
-                break;
+
+                /* Check for built-in type property/method */
+                bool is_property     = XEN_FALSE;
+                xen_native_fn method = xen_lookup_method(obj_val, name->str, &is_property);
+
+                if (method != NULL) {
+                    if (is_property) {
+                        /* It's a property - call immediately with receiver */
+                        xen_value receiver = stack_pop();
+                        xen_value result   = method(1, &receiver);
+                        stack_push(result);
+                    } else {
+                        /* It's a method - create a bound method */
+                        xen_value receiver          = stack_pop();
+                        xen_obj_bound_method* bound = xen_obj_bound_method_new(receiver, method, name->str);
+                        stack_push(OBJ_VAL(bound));
+                    }
+                    break;
+                }
+
+                runtime_error("undefined property '%s'", name->str);
+                return EXEC_RUNTIME_ERROR;
+            }
+            case OP_INVOKE: {
+                /* method invocation: obj.method(args) */
+                xen_obj_str* method_name = OBJ_AS_STRING(READ_CONSTANT());
+                u8 arg_count             = READ_BYTE();
+
+                /* the receiver is on the stack below the arguments */
+                xen_value receiver = peek(arg_count);
+
+                /* check for namespace method call */
+                if (VAL_IS_OBJ(receiver) && OBJ_IS_NAMESPACE(receiver)) {
+                    xen_obj_namespace* ns = OBJ_AS_NAMESPACE(receiver);
+                    xen_value method_val;
+                    if (!xen_obj_namespace_get(ns, method_name->str, &method_val)) {
+                        runtime_error("undefined method '%s' in namespace '%s'", method_name->str, ns->name);
+                        return EXEC_RUNTIME_ERROR;
+                    }
+
+                    /* replace namespace on stack with the function, then call */
+                    g_vm.stack_top[-arg_count - 1] = method_val;
+                    if (!call_value(method_val, arg_count)) {
+                        return EXEC_RUNTIME_ERROR;
+                    }
+                    frame = &g_vm.frames[g_vm.frame_count - 1];
+                    break;
+                }
+
+                /* look up built-in method */
+                bool is_property;
+                xen_native_fn method = xen_lookup_method(receiver, method_name->str, &is_property);
+
+                if (method != NULL) {
+                    /* build args array: [ receiver, arg1, arg2, ... ] */
+                    xen_value* args  = g_vm.stack_top - arg_count - 1;
+                    xen_value result = method(arg_count + 1, args); /* +1 for receiver */
+                    /* pop args and receiver, push result */
+                    g_vm.stack_top -= arg_count + 1;
+                    stack_push(result);
+                    break;
+                }
+
+                runtime_error("undefined method '%s'", method_name->str);
+                return EXEC_RUNTIME_ERROR;
             }
             case OP_ARRAY_NEW: {
                 u8 element_count   = READ_BYTE();

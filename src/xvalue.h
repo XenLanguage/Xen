@@ -16,6 +16,7 @@ typedef struct xen_obj_native_func   xen_obj_native_func;
 typedef struct xen_ns_entry          xen_ns_entry;
 typedef struct xen_obj_namespace     xen_obj_namespace;
 typedef struct xen_obj_array         xen_obj_array;
+typedef struct xen_obj_bound_method  xen_obj_bound_method;
 // clang-format on
 
 typedef enum {
@@ -60,5 +61,7 @@ void xen_value_array_init(xen_value_array* array);
 void xen_value_array_write(xen_value_array* array, xen_value value);
 void xen_value_array_free(xen_value_array* array);
 void xen_value_print(xen_value value);
+
+char* xen_value_type_to_str(xen_value value);
 
 #endif

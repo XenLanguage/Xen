@@ -10,6 +10,7 @@ typedef enum {
     OBJ_NATIVE_FUNC,
     OBJ_NAMESPACE,
     OBJ_ARRAY,
+    OBJ_BOUND_METHOD, /* for property access that returns a callable */
 } xen_obj_type;
 
 struct xen_obj {
@@ -57,6 +58,13 @@ struct xen_obj_array {
     xen_value_array array;
 };
 
+struct xen_obj_bound_method {
+    xen_obj obj;
+    xen_value receiver;   /* The object the method is bound to */
+    xen_native_fn method; /* The native method function */
+    const char* name;     /* Method name for debugging */
+};
+
 #define OBJ_TYPE(v) (VAL_AS_OBJ(v)->type)
 
 #define OBJ_IS_STRING(v) xen_obj_is_type(v, OBJ_STRING)
@@ -74,6 +82,9 @@ struct xen_obj_array {
 
 #define OBJ_IS_ARRAY(v) xen_obj_is_type(v, OBJ_ARRAY)
 #define OBJ_AS_ARRAY(v) ((xen_obj_array*)VAL_AS_OBJ(v))
+
+#define OBJ_IS_BOUND_METHOD(v) xen_obj_is_type(v, OBJ_BOUND_METHOD)
+#define OBJ_AS_BOUND_METHOD(v) ((xen_obj_bound_method*)VAL_AS_OBJ(v))
 
 bool xen_obj_is_type(xen_value value, xen_obj_type type);
 void xen_obj_print(xen_value value);
@@ -95,5 +106,18 @@ xen_value xen_obj_array_get(xen_obj_array* arr, i32 index);
 void xen_obj_array_set(xen_obj_array* arr, i32 index, xen_value value);
 xen_value xen_obj_array_pop(xen_obj_array* arr);
 i32 xen_obj_array_length(xen_obj_array* arr);
+
+/* Bound method functions */
+xen_obj_bound_method* xen_obj_bound_method_new(xen_value receiver, xen_native_fn method, const char* name);
+
+/* Method entry for method tables */
+typedef struct {
+    const char* name;
+    xen_native_fn method;
+    bool is_property; /* true = no parens needed (e.g., .len), false = callable */
+} xen_method_entry;
+
+/* Lookup a method on a value by name. Returns NULL if not found. */
+xen_native_fn xen_lookup_method(xen_value value, const char* name, bool* is_property);
 
 #endif

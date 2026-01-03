@@ -4,6 +4,7 @@
 #include "xutils.h"
 #include "xvalue.h"
 #include "xvm.h"
+#include "xbuiltin.h"
 
 #define ALLOCATE_OBJ(type, obj_type) (type*)allocate_obj(sizeof(type), obj_type);
 
@@ -46,6 +47,11 @@ void xen_obj_print(xen_value value) {
                 }
             }
             printf(" ]");
+            break;
+        }
+        case OBJ_BOUND_METHOD: {
+            printf("<BoundMethod %s>", OBJ_AS_BOUND_METHOD(value)->name);
+            break;
         }
     }
 }
@@ -187,4 +193,89 @@ xen_value xen_obj_array_pop(xen_obj_array* arr) {
 
 i32 xen_obj_array_length(xen_obj_array* arr) {
     return arr->array.count;
+}
+
+xen_obj_bound_method* xen_obj_bound_method_new(xen_value receiver, xen_native_fn method, const char* name) {
+    xen_obj_bound_method* bound = ALLOCATE_OBJ(xen_obj_bound_method, OBJ_BOUND_METHOD);
+    bound->receiver             = receiver;
+    bound->method               = method;
+    bound->name                 = name;
+    return bound;
+}
+
+/* ============================================================================
+ * method tables
+ * ============================================================================ */
+
+// clang-format off
+static xen_method_entry string_methods[] = {
+     {"len",         xen_str_len,         XEN_TRUE},   /* property */
+     {"upper",       xen_str_upper,       XEN_FALSE},
+     {"lower",       xen_str_lower,       XEN_FALSE},
+     {"trim",        xen_str_trim,        XEN_FALSE},
+     {"contains",    xen_str_contains,    XEN_FALSE},
+     {"starts_with", xen_str_starts_with, XEN_FALSE},
+     {"ends_with",   xen_str_ends_with,   XEN_FALSE},
+     {"substr",      xen_str_substr,      XEN_FALSE},
+     {"find",        xen_str_find,        XEN_FALSE},
+     {"split",       xen_str_split,       XEN_FALSE},
+    {"replace",     xen_str_replace,     XEN_FALSE},
+    {NULL,          NULL,                XEN_FALSE}
+};
+
+static xen_method_entry array_methods[] = {
+     {"len",       xen_arr_len,       XEN_TRUE},   /* property */
+     {"push",      xen_arr_push,      XEN_FALSE},
+     {"pop",       xen_arr_pop,       XEN_FALSE},
+     {"first",     xen_arr_first,     XEN_TRUE},   /* property */
+     {"last",      xen_arr_last,      XEN_TRUE},   /* property */
+     {"clear",     xen_arr_clear,     XEN_FALSE},
+     {"contains",  xen_arr_contains,  XEN_FALSE},
+     {"index_of",  xen_arr_index_of,  XEN_FALSE},
+     {"reverse",   xen_arr_reverse,   XEN_FALSE},
+     {"join",      xen_arr_join,      XEN_FALSE},
+    {NULL,        NULL,              XEN_FALSE}
+};
+
+static xen_method_entry number_methods[] = {
+     {"abs",       xen_num_abs,       XEN_FALSE},
+     {"floor",     xen_num_floor,     XEN_FALSE},
+     {"ceil",      xen_num_ceil,      XEN_FALSE},
+     {"round",     xen_num_round,     XEN_FALSE},
+     {"to_string", xen_num_to_string, XEN_FALSE},
+     {NULL,        NULL,              XEN_FALSE}
+};
+// clang-format on
+
+static xen_native_fn lookup_in_table(xen_method_entry* table, const char* name, bool* is_property) {
+    for (i32 i = 0; table[i].name != NULL; i++) {
+        if (strcmp(table[i].name, name) == 0) {
+            if (is_property)
+                *is_property = table[i].is_property;
+            return table[i].method;
+        }
+    }
+    return NULL;
+}
+
+xen_native_fn xen_lookup_method(xen_value value, const char* name, bool* is_property) {
+    if (is_property)
+        *is_property = XEN_FALSE;
+
+    if (VAL_IS_NUMBER(value)) {
+        return lookup_in_table(number_methods, name, is_property);
+    }
+
+    if (!VAL_IS_OBJ(value)) {
+        return NULL;
+    }
+
+    switch (OBJ_TYPE(value)) {
+        case OBJ_STRING:
+            return lookup_in_table(string_methods, name, is_property);
+        case OBJ_ARRAY:
+            return lookup_in_table(array_methods, name, is_property);
+        default:
+            return NULL;
+    }
 }
