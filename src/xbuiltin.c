@@ -732,63 +732,51 @@ xen_value xen_arr_join(i32 argc, xen_value* args) {
         return NULL_VAL;
 
     xen_obj_array* arr = OBJ_AS_ARRAY(args[0]);
-    const char* sep    = ",";
-    i32 sep_len        = 1;
+    char* delim        = ", ";
 
-    if (argc >= 2 && OBJ_IS_STRING(args[1])) {
-        xen_obj_str* sep_str = OBJ_AS_STRING(args[1]);
-        sep                  = sep_str->str;
-        sep_len              = sep_str->length;
+    if (argc > 1 && VAL_IS_OBJ(args[1]) && OBJ_IS_STRING(args[1])) {
+        delim = OBJ_AS_CSTRING(args[1]);
     }
 
-    if (arr->array.count == 0) {
-        return OBJ_VAL(xen_obj_str_copy("", 0));
-    }
+    const i32 size                     = arr->array.count;
+    XEN_CLEANUP_FREE xen_value* values = (xen_value*)malloc(sizeof(xen_value) * size);
+    size_t strbuf_size_needed          = 0;
 
-    i32 total_len = 0;
-    for (i32 i = 0; i < arr->array.count; i++) {
-        if (OBJ_IS_STRING(arr->array.values[i])) {
-            total_len += OBJ_AS_STRING(arr->array.values[i])->length;
-        } else if (VAL_IS_NUMBER(arr->array.values[i])) {
-            total_len += 20;
-        } else if (VAL_IS_BOOL(arr->array.values[i])) {
-            total_len += 5;
-        } else if (VAL_IS_NULL(arr->array.values[i])) {
-            total_len += 4;
-        }
-        if (i < arr->array.count - 1) {
-            total_len += sep_len;
+    for (i32 i = 0; i < size; i++) {
+        xen_value arg[] = {arr->array.values[i]};
+        /* use string constructor to handle automatically converting each array value to a string */
+        xen_value as_str = xen_builtin_string_ctor(1, arg);
+        values[i]        = as_str;
+        strbuf_size_needed += OBJ_AS_STRING(as_str)->length;
+        if (i < size - 1) {
+            strbuf_size_needed += strlen(delim);
         }
     }
 
-    char* buffer = malloc(total_len + 1);
-    char* ptr    = buffer;
+    XEN_CLEANUP_FREE char* strbuf = (char*)malloc(strbuf_size_needed + 1);
+    size_t offset                 = 0;
+    for (i32 i = 0; i < size; i++) {
+        xen_obj_str* str = OBJ_AS_STRING(values[i]);
+        memcpy(strbuf + offset, str->str, str->length);
+        offset += str->length;
 
-    for (i32 i = 0; i < arr->array.count; i++) {
-        if (OBJ_IS_STRING(arr->array.values[i])) {
-            xen_obj_str* s = OBJ_AS_STRING(arr->array.values[i]);
-            memcpy(ptr, s->str, s->length);
-            ptr += s->length;
-        } else if (VAL_IS_NUMBER(arr->array.values[i])) {
-            ptr += sprintf(ptr, "%g", VAL_AS_NUMBER(arr->array.values[i]));
-        } else if (VAL_IS_BOOL(arr->array.values[i])) {
-            const char* b = VAL_AS_BOOL(arr->array.values[i]) ? "true" : "false";
-            i32 len       = VAL_AS_BOOL(arr->array.values[i]) ? 4 : 5;
-            memcpy(ptr, b, len);
-            ptr += len;
-        } else if (VAL_IS_NULL(arr->array.values[i])) {
-            memcpy(ptr, "null", 4);
-            ptr += 4;
-        }
-
-        if (i < arr->array.count - 1) {
-            memcpy(ptr, sep, sep_len);
-            ptr += sep_len;
+        if (i < size - 1) {
+            memcpy(strbuf + offset, delim, strlen(delim));
+            offset += strlen(delim);
         }
     }
-    *ptr = '\0';
+    strbuf[strbuf_size_needed] = '\0';
 
-    return OBJ_VAL(xen_obj_str_take(buffer, (i32)(ptr - buffer)));
+    return OBJ_VAL(xen_obj_str_copy(strbuf, strbuf_size_needed));
+}
+
+xen_value xen_arr_concat(i32 argc, xen_value* args) {
+    if (argc < 1) {
+        xen_runtime_error("array.concat() requires at least one argument");
+        return NULL_VAL;
+    }
+
+    return NULL_VAL;
 }
 
 xen_obj_namespace* xen_builtin_array() {
@@ -803,6 +791,7 @@ xen_obj_namespace* xen_builtin_array() {
     xen_obj_namespace_set(arr, "index_of", OBJ_VAL(xen_obj_native_func_new(xen_arr_index_of, "index_of")));
     xen_obj_namespace_set(arr, "reverse", OBJ_VAL(xen_obj_native_func_new(xen_arr_reverse, "reverse")));
     xen_obj_namespace_set(arr, "join", OBJ_VAL(xen_obj_native_func_new(xen_arr_join, "join")));
+    xen_obj_namespace_set(arr, "concat", OBJ_VAL(xen_obj_native_func_new(xen_arr_concat, "concat")));
     return arr;
 }
 
