@@ -1,6 +1,7 @@
 # Changelog
 
 ## Table of Contents
+- [v0.4.1](#v041-january-4-2026)
 - [v0.4.0](#v040-january-3-2026)
 - [v0.3.0](#v030-january-2-2026)
 - [v0.2.0](#v020-january-2-2026)
