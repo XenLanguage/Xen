@@ -33,7 +33,7 @@ typedef enum {
     OP_LOOP,
     OP_INCLUDE,
     OP_GET_PROPERTY,
-    OP_INVOKE, /* invoke method on value (obj.method(args)) */
+    OP_INVOKE, // invoke method on value (obj.method(args))
     OP_ARRAY_NEW,
     OP_ARRAY_GET,
     OP_ARRAY_SET,

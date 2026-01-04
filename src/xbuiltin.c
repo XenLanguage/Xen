@@ -55,7 +55,7 @@ static xen_value xen_builtin_typeof(i32 argc, xen_value* args) {
     return OBJ_VAL(xen_obj_str_copy(type_str, strlen(type_str)));
 }
 
-/* type constructors */
+// type constructors
 static xen_value xen_builtin_number_ctor(i32 argc, xen_value* args) {
     if (argc != 1) {
         xen_runtime_error("number constructor requires an argument");
@@ -141,7 +141,7 @@ static xen_value xen_builtin_bool_ctor(i32 argc, xen_value* args) {
     return BOOL_VAL(XEN_TRUE);
 }
 
-/* signature: (number of elements, default value (or null if missing)) */
+// signature: (number of elements, default value (or null if missing))
 static xen_value xen_builtin_array_ctor(i32 argc, xen_value* args) {
     if (argc > 2) {
         xen_runtime_error("array constructor has invalid number of arguments");
@@ -157,7 +157,7 @@ static xen_value xen_builtin_array_ctor(i32 argc, xen_value* args) {
     bool has_default        = (argc == 2) ? XEN_TRUE : XEN_FALSE;
     xen_value default_value = (has_default) ? args[1] : NULL_VAL;
 
-    /* create the array */
+    // create the array
     xen_obj_array* arr = xen_obj_array_new_with_capacity(element_count);
     for (i32 i = 0; i < element_count; i++) {
         xen_obj_array_push(arr, default_value);
@@ -174,10 +174,10 @@ void xen_builtins_register() {
     xen_vm_register_namespace("datetime", OBJ_VAL(xen_builtin_datetime()));
     xen_vm_register_namespace("array", OBJ_VAL(xen_builtin_array()));
 
-    /* register globals */
+    // register globals
     define_native_fn("typeof", xen_builtin_typeof);
 
-    /* type constructors */
+    // type constructors
     define_native_fn("number", xen_builtin_number_ctor);
     define_native_fn("string", xen_builtin_string_ctor);
     define_native_fn("bool", xen_builtin_bool_ctor);
@@ -744,7 +744,7 @@ xen_value xen_arr_join(i32 argc, xen_value* args) {
 
     for (i32 i = 0; i < size; i++) {
         xen_value arg[] = {arr->array.values[i]};
-        /* use string constructor to handle automatically converting each array value to a string */
+        // use string constructor to handle automatically converting each array value to a string
         xen_value as_str = xen_builtin_string_ctor(1, arg);
         values[i]        = as_str;
         strbuf_size_needed += OBJ_AS_STRING(as_str)->length;
@@ -770,15 +770,6 @@ xen_value xen_arr_join(i32 argc, xen_value* args) {
     return OBJ_VAL(xen_obj_str_copy(strbuf, strbuf_size_needed));
 }
 
-xen_value xen_arr_concat(i32 argc, xen_value* args) {
-    if (argc < 1) {
-        xen_runtime_error("array.concat() requires at least one argument");
-        return NULL_VAL;
-    }
-
-    return NULL_VAL;
-}
-
 xen_obj_namespace* xen_builtin_array() {
     xen_obj_namespace* arr = xen_obj_namespace_new("array");
     xen_obj_namespace_set(arr, "len", OBJ_VAL(xen_obj_native_func_new(xen_arr_len, "len")));
@@ -791,7 +782,6 @@ xen_obj_namespace* xen_builtin_array() {
     xen_obj_namespace_set(arr, "index_of", OBJ_VAL(xen_obj_native_func_new(xen_arr_index_of, "index_of")));
     xen_obj_namespace_set(arr, "reverse", OBJ_VAL(xen_obj_native_func_new(xen_arr_reverse, "reverse")));
     xen_obj_namespace_set(arr, "join", OBJ_VAL(xen_obj_native_func_new(xen_arr_join, "join")));
-    xen_obj_namespace_set(arr, "concat", OBJ_VAL(xen_obj_native_func_new(xen_arr_concat, "concat")));
     return arr;
 }
 
@@ -830,3 +820,5 @@ xen_value xen_num_to_string(i32 argc, xen_value* args) {
     i32 len = snprintf(buffer, sizeof(buffer), "%g", VAL_AS_NUMBER(args[0]));
     return OBJ_VAL(xen_obj_str_copy(buffer, len));
 }
+
+

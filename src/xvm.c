@@ -15,7 +15,7 @@
 
 //====================================================================================================================//
 
-/* Global VM instance */
+// Global VM instance
 xen_vm g_vm;
 
 //====================================================================================================================//
@@ -63,7 +63,7 @@ static void runtime_error(const char* fmt, ...) {
     va_end(args);
     fputs("\n", stderr);
 
-    /* print stack trace */
+    // print stack trace
     for (i32 i = g_vm.frame_count - 1; i >= 0; i--) {
         xen_call_frame* frame = &g_vm.frames[i];
         xen_obj_func* fn      = frame->fn;
@@ -160,7 +160,7 @@ void xen_vm_shutdown() {
 
 //====================================================================================================================//
 
-/* This is the core of the entire interpreter */
+// This is the core of the entire interpreter
 static xen_exec_result run() {
     xen_call_frame* frame = &g_vm.frames[g_vm.frame_count - 1];
 
@@ -344,7 +344,7 @@ static xen_exec_result run() {
                 xen_obj_str* name = OBJ_AS_STRING(READ_CONSTANT());
                 xen_value obj_val = peek(0);
 
-                /* Check for namespace property access */
+                // Check for namespace property access
                 if (VAL_IS_OBJ(obj_val) && OBJ_TYPE(obj_val) == OBJ_NAMESPACE) {
                     xen_obj_namespace* ns = OBJ_AS_NAMESPACE(obj_val);
                     xen_value result;
@@ -358,18 +358,18 @@ static xen_exec_result run() {
                     break;
                 }
 
-                /* Check for built-in type property/method */
+                // Check for built-in type property/method
                 bool is_property     = XEN_FALSE;
                 xen_native_fn method = xen_lookup_method(obj_val, name->str, &is_property);
 
                 if (method != NULL) {
                     if (is_property) {
-                        /* It's a property - call immediately with receiver */
+                        // It's a property - call immediately with receiver
                         xen_value receiver = stack_pop();
                         xen_value result   = method(1, &receiver);
                         stack_push(result);
                     } else {
-                        /* It's a method - create a bound method */
+                        // It's a method - create a bound method
                         xen_value receiver          = stack_pop();
                         xen_obj_bound_method* bound = xen_obj_bound_method_new(receiver, method, name->str);
                         stack_push(OBJ_VAL(bound));
@@ -381,14 +381,14 @@ static xen_exec_result run() {
                 return EXEC_RUNTIME_ERROR;
             }
             case OP_INVOKE: {
-                /* method invocation: obj.method(args) */
+                // method invocation: obj.method(args)
                 xen_obj_str* method_name = OBJ_AS_STRING(READ_CONSTANT());
                 u8 arg_count             = READ_BYTE();
 
-                /* the receiver is on the stack below the arguments */
+                // the receiver is on the stack below the arguments
                 xen_value receiver = peek(arg_count);
 
-                /* check for namespace method call */
+                // check for namespace method call
                 if (VAL_IS_OBJ(receiver) && OBJ_IS_NAMESPACE(receiver)) {
                     xen_obj_namespace* ns = OBJ_AS_NAMESPACE(receiver);
                     xen_value method_val;
@@ -397,7 +397,7 @@ static xen_exec_result run() {
                         return EXEC_RUNTIME_ERROR;
                     }
 
-                    /* replace namespace on stack with the function, then call */
+                    // replace namespace on stack with the function, then call
                     g_vm.stack_top[-arg_count - 1] = method_val;
                     if (!call_value(method_val, arg_count)) {
                         return EXEC_RUNTIME_ERROR;
@@ -406,15 +406,15 @@ static xen_exec_result run() {
                     break;
                 }
 
-                /* look up built-in method */
+                // look up built-in method
                 bool is_property;
                 xen_native_fn method = xen_lookup_method(receiver, method_name->str, &is_property);
 
                 if (method != NULL) {
-                    /* build args array: [ receiver, arg1, arg2, ... ] */
+                    // build args array: [ receiver, arg1, arg2, ... ]
                     xen_value* args  = g_vm.stack_top - arg_count - 1;
-                    xen_value result = method(arg_count + 1, args); /* +1 for receiver */
-                    /* pop args and receiver, push result */
+                    xen_value result = method(arg_count + 1, args); // +1 for receiver
+                    // pop args and receiver, push result
                     g_vm.stack_top -= arg_count + 1;
                     stack_push(result);
                     break;
@@ -427,8 +427,8 @@ static xen_exec_result run() {
                 u8 element_count   = READ_BYTE();
                 xen_obj_array* arr = xen_obj_array_new_with_capacity(element_count);
                 arr->array.count   = element_count;
-                /* Elements are on stack in reverse order (first pushed = bottom) */
-                /* We need to add them in correct order */
+                // Elements are on stack in reverse order (first pushed = bottom)
+                // We need to add them in correct order
                 for (i32 i = element_count - 1; i >= 0; i--) {
                     arr->array.values[i] = stack_pop();
                 }
@@ -436,7 +436,7 @@ static xen_exec_result run() {
                 break;
             }
             case OP_ARRAY_GET: {
-                /* stack: [array, index] -> [value] */
+                // stack: [array, index] -> [value]
                 xen_value index_val = stack_pop();
                 xen_value array_val = stack_pop();
 
@@ -461,7 +461,7 @@ static xen_exec_result run() {
                 break;
             }
             case OP_ARRAY_SET: {
-                /* stack: [array, index, value] -> [value] */
+                // stack: [array, index, value] -> [value]
                 xen_value value     = stack_pop();
                 xen_value index_val = stack_pop();
                 xen_value array_val = stack_pop();
@@ -484,7 +484,7 @@ static xen_exec_result run() {
                 }
 
                 arr->array.values[index] = value;
-                stack_push(value); /* assignment is an expression, leaves value on stack */
+                stack_push(value); // assignment is an expression, leaves value on stack
                 break;
             }
             case OP_ARRAY_LEN: {
@@ -538,7 +538,7 @@ static void write_bytecode(const xen_obj_func* fn, const char* filename) {
         xen_panic(XEN_ERR_INVALID_ARGS, "arg fn is NULL");
     }
 
-    /* write function metadata (constants, line count) */
+    // write function metadata (constants, line count)
     xen_bin_writer writer;
     xen_bin_writer_init(&writer, XEN_MB(4));
 
@@ -584,7 +584,7 @@ static void write_bytecode(const xen_obj_func* fn, const char* filename) {
                     WRITE((u32)str->length);
                     xen_bin_write_fixed_str(&writer, str->str, strlen(str->str) + 1);
                 } else if (OBJ_IS_FUNCTION(constant)) {
-                    /* I don't know if I need to write these or not. I don't think I do. */
+                    // I don't know if I need to write these or not. I don't think I do.
                 } else if (OBJ_IS_NATIVE_FUNC(constant)) {
                 }
             } break;

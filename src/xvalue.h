@@ -7,7 +7,7 @@
 
 #include "xcommon.h"
 
-/* xobject.h forward declarations */
+// xobject.h forward declarations
 // clang-format off
 typedef struct xen_obj               xen_obj;
 typedef struct xen_obj_str           xen_obj_str;

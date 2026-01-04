@@ -1,0 +1,9 @@
+{
+    "makefile.launchConfigurations": [
+        {
+            "cwd": "/home/jr/Code/xen/bin",
+            "binaryPath": "/home/jr/Code/xen/bin/xen",
+            "binaryArgs": []
+        }
+    ]
+}

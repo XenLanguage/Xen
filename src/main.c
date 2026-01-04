@@ -136,7 +136,7 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    /* check supplied file extension so we know whether this is source or bytecode */
+    // check supplied file extension so we know whether this is source or bytecode
     const char* ext = strrchr(arg1, '.');
     if (!ext) {
         xen_panic(XEN_ERR_INVALID_ARGS, "supplied filename is invalid (no extension)");

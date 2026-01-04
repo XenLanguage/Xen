@@ -21,7 +21,7 @@ void xen_bin_writer_free(xen_bin_writer* writer) {
 }
 
 static void update_position_consumed(xen_bin_writer* writer, size_t size) {
-    /* only update the consumed size if our position is at the end of the buffer */
+    // only update the consumed size if our position is at the end of the buffer
     if (writer->pos == writer->consumed) {
         writer->consumed += size;
     }
@@ -90,7 +90,7 @@ void xen_bin_write_f64(xen_bin_writer* writer, f64 value) {
 
 void xen_bin_write_str(xen_bin_writer* writer, const char* value) {
     u32 len = (u32)strlen(value);
-    /* write string length first. format is len:string */
+    // write string length first. format is len:string
     xen_bin_write(writer, len);
     xen_bin_write_fixed_str(writer, value, len);
 }

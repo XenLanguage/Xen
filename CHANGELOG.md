@@ -6,6 +6,22 @@
 - [v0.2.0](#v020-january-2-2026)
 - [v0.1.0](#v010-january-1-2026)
 
+## v0.4.1 (January 4, 2026)
+
+### Changed
+- Arrow functions no longer require a semicolon `;` at the end of the function anymore:
+```js
+// OLD
+fn xadd(x) => ++x;
+//             needed here as well
+//                      v
+some_func(fn(x) => x / 2;, 100);
+
+// NEW
+fn xadd(x) => ++x
+some_func(fn(x) => x / 2, 100);
+```
+
 ## v0.4.0 (January 3, 2026)
 
 Xen 0.4 adds constructors, methods and properties, lambdas, and constant variable declarations. It also makes some breaking changes to the `io` namespace and adds syntactic sugar for single-line implicit return functions.

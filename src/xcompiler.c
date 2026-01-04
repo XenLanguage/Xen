@@ -17,7 +17,7 @@ typedef struct {
     xen_token previous;
     bool had_error;
     bool panic_mode;
-    /* remember last variable parsed for postfix operators */
+    // remember last variable parsed for postfix operators
     bool last_was_variable;
     xen_token last_variable;
     bool last_was_local;
@@ -76,7 +76,7 @@ static const char* builtin_namespaces[] = {
   "string",
   "datetime",
   "array",
-  NULL, /* sentinel */
+  NULL, // sentinel
 };
 
 static bool is_valid_namespace(const char* name, i32 length) {
@@ -193,9 +193,9 @@ static void emit_return() {
 
 static i32 emit_jump(u8 instruction) {
     emit_byte(instruction);
-    emit_byte(0xFF);                   /* placeholder (will be patched) */
-    emit_byte(0xFF);                   /* placeholder (will be patched) */
-    return current_chunk()->count - 2; /* return offset location */
+    emit_byte(0xFF);                   // placeholder (will be patched)
+    emit_byte(0xFF);                   // placeholder (will be patched)
+    return current_chunk()->count - 2; // return offset location
 }
 
 static void patch_jump(i32 offset) {
@@ -401,13 +401,13 @@ static void named_variable(xen_token name, bool can_assign) {
         set_op       = OP_SET_GLOBAL;
     }
 
-    /* record for potential postfix operator */
+    // record for potential postfix operator
     parser.last_was_variable = XEN_TRUE;
     parser.last_variable     = name;
     parser.last_was_local    = is_local;
     parser.last_variable_arg = arg;
 
-    /* check for any assignment to const variable */
+    // check for any assignment to const variable
     if (can_assign && is_const_var) {
         if (check(TOKEN_EQUAL) || check(TOKEN_PLUS_EQUAL) || check(TOKEN_MINUS_EQUAL) || check(TOKEN_ASTERISK_EQUAL) ||
             check(TOKEN_SLASH_EQUAL) || check(TOKEN_PERCENT_EQUAL)) {
@@ -422,16 +422,16 @@ static void named_variable(xen_token name, bool can_assign) {
     }
 
     if (can_assign && match_token(TOKEN_EQUAL)) {
-        parser.last_was_variable = XEN_FALSE; /* consumed by assignment */
+        parser.last_was_variable = XEN_FALSE; // consumed by assignment
         expression();
         emit_bytes(set_op, (u8)arg);
     } else if (can_assign && match_token(TOKEN_PLUS_EQUAL)) {
-        /* i += expr  →  i = i + expr */
+        // i += expr  →  i = i + expr
         parser.last_was_variable = XEN_FALSE;
-        emit_bytes(get_op, (u8)arg); /* push current value */
-        expression();                /* push increment */
-        emit_byte(OP_ADD);           /* add them */
-        emit_bytes(set_op, (u8)arg); /* store result */
+        emit_bytes(get_op, (u8)arg); // push current value
+        expression();                // push increment
+        emit_byte(OP_ADD);           // add them
+        emit_bytes(set_op, (u8)arg); // store result
     } else if (can_assign && match_token(TOKEN_MINUS_EQUAL)) {
         parser.last_was_variable = XEN_FALSE;
         emit_bytes(get_op, (u8)arg);
@@ -588,18 +588,18 @@ static void call(bool can_assign) {
 
 static void and_(bool can_assign) {
     XEN_UNUSED(can_assign);
-    /* left operand already compiled and on stack */
+    // left operand already compiled and on stack
     i32 end_jump = emit_jump(OP_JUMP_IF_FALSE);
-    emit_byte(OP_POP);          /* discard left if truthy */
-    parse_precedence(PREC_AND); /* compile right operand */
+    emit_byte(OP_POP);          // discard left if truthy
+    parse_precedence(PREC_AND); // compile right operand
     patch_jump(end_jump);
-    /* if left was false, it's still on stack (short-circuit) */
-    /* if left was true, right operand is on stack */
+    // if left was false, it's still on stack (short-circuit)
+    // if left was true, right operand is on stack
 }
 
 static void or_(bool can_assign) {
     XEN_UNUSED(can_assign);
-    /* jump over the "skip right side" jump if false */
+    // jump over the "skip right side" jump if false
     i32 else_jump = emit_jump(OP_JUMP_IF_FALSE);
     i32 end_jump  = emit_jump(OP_JUMP);
     patch_jump(else_jump);
@@ -757,12 +757,12 @@ static void dot(bool can_assign) {
     u8 name = identifier_constant(&parser.previous);
 
     if (match_token(TOKEN_LEFT_PAREN)) {
-        /* method call: obj.method(args) */
+        // method call: obj.method(args)
         u8 arg_count = argument_list();
         emit_bytes(OP_INVOKE, name);
         emit_byte(arg_count);
     } else {
-        /* property access: obj.property */
+        // property access: obj.property
         emit_bytes(OP_GET_PROPERTY, name);
     }
 }
@@ -952,26 +952,26 @@ static void return_statement() {
 }
 
 static void if_statement() {
-    /* parse condition */
+    // parse condition
     consume(TOKEN_LEFT_PAREN, "expected '(' after 'if'");
     expression();
     consume(TOKEN_RIGHT_PAREN, "expected ')' after condition");
 
-    /* emit conditional jump (will skip 'then' branch if false) */
+    // emit conditional jump (will skip 'then' branch if false)
     i32 then_jump = emit_jump(OP_JUMP_IF_FALSE);
-    emit_byte(OP_POP); /* pop condition from stack */
+    emit_byte(OP_POP); // pop condition from stack
 
-    /* compile 'then' branch */
+    // compile 'then' branch
     statement();
 
-    /* emit unconditional jump (will skip 'else' branch) */
+    // emit unconditional jump (will skip 'else' branch)
     i32 else_jump = emit_jump(OP_JUMP);
 
-    /* patch the conditional jump to land here */
+    // patch the conditional jump to land here
     patch_jump(then_jump);
-    emit_byte(OP_POP); /* pop condition (for false path) */
+    emit_byte(OP_POP); // pop condition (for false path)
 
-    /* compile 'else' branch (if present) */
+    // compile 'else' branch (if present)
     if (match_token(TOKEN_ELSE)) {
         statement();
     }
@@ -980,24 +980,24 @@ static void if_statement() {
 }
 
 static void while_statement() {
-    i32 loop_start = current_chunk()->count; /* remember where to jump back */
+    i32 loop_start = current_chunk()->count; // remember where to jump back
 
-    /* parse condition */
+    // parse condition
     consume(TOKEN_LEFT_PAREN, "expected '(' after 'while'");
     expression();
     consume(TOKEN_RIGHT_PAREN, "expected ')' after condition");
 
-    /* exit jump (when condition is false) */
+    // exit jump (when condition is false)
     i32 exit_jump = emit_jump(OP_JUMP_IF_FALSE);
-    emit_byte(OP_POP); /* pop condition */
+    emit_byte(OP_POP); // pop condition
 
-    /* compile body */
+    // compile body
     statement();
 
-    /* jump back to condition */
+    // jump back to condition
     emit_loop(loop_start);
 
-    /* patch exit jump */
+    // patch exit jump
     patch_jump(exit_jump);
     emit_byte(OP_POP);
 }
@@ -1019,28 +1019,28 @@ static void var_declaration();
 static void for_in_statement() {
     begin_scope();
 
-    /* parse: for (var i in start..end) */
+    // parse: for (var i in start..end)
     consume(TOKEN_LEFT_PAREN, "expected '(' after 'for'");
     consume(TOKEN_VAR, "expected 'var' in for-in loop");
     consume(TOKEN_IDENTIFIER, "expected loop variable name");
 
-    /* declare the loop variable */
+    // declare the loop variable
     xen_token loop_var = parser.previous;
     add_local(loop_var, XEN_FALSE);
 
     consume(TOKEN_IN, "expected 'in' after loop variable");
 
-    /* compile start expression and initialize loop variable */
+    // compile start expression and initialize loop variable
     expression();
-    mark_initialized(); /* loop var is now slot (local_count - 1) */
+    mark_initialized(); // loop var is now slot (local_count - 1)
     u8 loop_var_slot = (u8)(current->local_count - 1);
 
     consume(TOKEN_DOT_DOT, "expected '..' in range");
 
-    /* compile end expression into a hidden local */
+    // compile end expression into a hidden local
     expression();
 
-    /* create hidden __end variable */
+    // create hidden __end variable
     xen_token end_token;
     end_token.start  = "__end";
     end_token.length = 5;
@@ -1052,34 +1052,34 @@ static void for_in_statement() {
 
     consume(TOKEN_RIGHT_PAREN, "expected ')' after range");
 
-    /* loop_start: where we jump back to for each iteration */
+    // loop_start: where we jump back to for each iteration
     i32 loop_start = current_chunk()->count;
 
-    /* condition: i < __end */
+    // condition: i < __end
     emit_bytes(OP_GET_LOCAL, loop_var_slot);
     emit_bytes(OP_GET_LOCAL, end_var_slot);
     emit_byte(OP_LESS);
 
-    /* exit jump (when condition is false) */
+    // exit jump (when condition is false)
     i32 exit_jump = emit_jump(OP_JUMP_IF_FALSE);
-    emit_byte(OP_POP); /* pop condition */
+    emit_byte(OP_POP); // pop condition
 
-    /* compile body */
+    // compile body
     statement();
 
-    /* increment: i = i + 1 */
+    // increment: i = i + 1
     emit_bytes(OP_GET_LOCAL, loop_var_slot);
     emit_constant(NUMBER_VAL(1));
     emit_byte(OP_ADD);
     emit_bytes(OP_SET_LOCAL, loop_var_slot);
-    emit_byte(OP_POP); /* pop the result of the assignment */
+    emit_byte(OP_POP); // pop the result of the assignment
 
-    /* jump back to condition */
+    // jump back to condition
     emit_loop(loop_start);
 
-    /* patch exit jump */
+    // patch exit jump
     patch_jump(exit_jump);
-    emit_byte(OP_POP); /* pop condition (false case) */
+    emit_byte(OP_POP); // pop condition (false case)
 
     end_scope();
 }
@@ -1088,12 +1088,12 @@ static void for_in_statement() {
  * C-style for statement: for (init; cond; incr) { body }
  */
 static void for_c_style_statement() {
-    begin_scope(); /* for loop variable */
+    begin_scope(); // for loop variable
     consume(TOKEN_LEFT_PAREN, "expected '(' after 'for'");
 
-    /* initializer clause */
+    // initializer clause
     if (match_token(TOKEN_SEMICOLON)) {
-        /* no initializer */
+        // no initializer
     } else if (match_token(TOKEN_VAR)) {
         var_declaration();
     } else {
@@ -1102,7 +1102,7 @@ static void for_c_style_statement() {
 
     i32 loop_start = current_chunk()->count;
 
-    /* condition clause */
+    // condition clause
     i32 exit_jump = -1;
     if (!match_token(TOKEN_SEMICOLON)) {
         expression();
@@ -1111,7 +1111,7 @@ static void for_c_style_statement() {
         emit_byte(OP_POP);
     }
 
-    /* increment clause (compiled but executed after body) */
+    // increment clause (compiled but executed after body)
     if (!match_token(TOKEN_RIGHT_PAREN)) {
         i32 body_jump       = emit_jump(OP_JUMP);
         i32 increment_start = current_chunk()->count;
@@ -1123,7 +1123,7 @@ static void for_c_style_statement() {
         patch_jump(body_jump);
     }
 
-    /* body */
+    // body
     statement();
     emit_loop(loop_start);
 
@@ -1141,33 +1141,33 @@ static void for_c_style_statement() {
  *   for (init; cond; incr) { ... } -> C-style
  */
 static void for_statement() {
-    /* peek ahead to determine which kind of for-loop */
-    /* if we see "var IDENT in" then it's for-in, otherwise C-style */
+    // peek ahead to determine which kind of for-loop
+    // if we see "var IDENT in" then it's for-in, otherwise C-style
 
     if (check(TOKEN_LEFT_PAREN)) {
-        /* We need to look further ahead. Let's consume '(' and check */
-        advance(); /* consume '(' */
+        // We need to look further ahead. Let's consume '(' and check
+        advance(); // consume '('
 
         if (check(TOKEN_VAR)) {
-            /* Could be either "var i = ..." (C-style) or "var i in ..." (for-in) */
-            advance(); /* consume 'var' */
+            // Could be either "var i = ..." (C-style) or "var i in ..." (for-in)
+            advance(); // consume 'var'
 
             if (check(TOKEN_IDENTIFIER)) {
-                advance(); /* consume identifier */
+                advance(); // consume identifier
 
                 if (check(TOKEN_IN)) {
-                    /* It's a for-in loop: for (var i in start..end) OR for (var x in array) */
-                    /* We've already consumed '(', 'var', and the identifier */
-                    xen_token loop_var = parser.previous; /* the identifier */
+                    // It's a for-in loop: for (var i in start..end) OR for (var x in array)
+                    // We've already consumed '(', 'var', and the identifier
+                    xen_token loop_var = parser.previous; // the identifier
 
                     begin_scope();
 
                     consume(TOKEN_IN, "expected 'in' after loop variable");
 
-                    /* Parse the expression after 'in' */
+                    // Parse the expression after 'in'
                     expression();
 
-                    /* Now check: is this a range (has ..) or an array iteration? */
+                    // Now check: is this a range (has ..) or an array iteration?
                     if (match_token(TOKEN_DOT_DOT)) {
                         /* ============================================
                          * RANGE-BASED FOR LOOP: for (var i in start..end)
@@ -1178,16 +1178,16 @@ static void for_statement() {
                          *   while (i < __end) { body; i = i + 1; }
                          */
 
-                        /* The start value is already on the stack from expression() above */
-                        /* Declare loop variable and initialize with start value */
+                        // The start value is already on the stack from expression() above
+                        // Declare loop variable and initialize with start value
                         add_local(loop_var, XEN_FALSE);
                         mark_initialized();
                         u8 loop_var_slot = (u8)(current->local_count - 1);
 
-                        /* Compile end expression into a hidden local */
+                        // Compile end expression into a hidden local
                         expression();
 
-                        /* Create hidden __end variable */
+                        // Create hidden __end variable
                         xen_token end_token;
                         end_token.start  = "__end";
                         end_token.length = 5;
@@ -1199,10 +1199,10 @@ static void for_statement() {
 
                         consume(TOKEN_RIGHT_PAREN, "expected ')' after range");
 
-                        /* loop_start */
+                        // loop_start
                         i32 loop_start = current_chunk()->count;
 
-                        /* condition: i < __end */
+                        // condition: i < __end
                         emit_bytes(OP_GET_LOCAL, loop_var_slot);
                         emit_bytes(OP_GET_LOCAL, end_var_slot);
                         emit_byte(OP_LESS);
@@ -1210,10 +1210,10 @@ static void for_statement() {
                         i32 exit_jump = emit_jump(OP_JUMP_IF_FALSE);
                         emit_byte(OP_POP);
 
-                        /* body */
+                        // body
                         statement();
 
-                        /* increment: i = i + 1 */
+                        // increment: i = i + 1
                         emit_bytes(OP_GET_LOCAL, loop_var_slot);
                         emit_constant(NUMBER_VAL(1));
                         emit_byte(OP_ADD);
@@ -1242,8 +1242,8 @@ static void for_statement() {
                          *   }
                          */
 
-                        /* The array value is on the stack from expression() above */
-                        /* Store it in hidden __arr variable */
+                        // The array value is on the stack from expression() above
+                        // Store it in hidden __arr variable
                         xen_token arr_token;
                         arr_token.start  = "__arr";
                         arr_token.length = 5;
@@ -1253,7 +1253,7 @@ static void for_statement() {
                         mark_initialized();
                         u8 arr_slot = (u8)(current->local_count - 1);
 
-                        /* Get array length and store in __len */
+                        // Get array length and store in __len
                         emit_bytes(OP_GET_LOCAL, arr_slot);
                         emit_byte(OP_ARRAY_LEN);
 
@@ -1266,7 +1266,7 @@ static void for_statement() {
                         mark_initialized();
                         u8 len_slot = (u8)(current->local_count - 1);
 
-                        /* Initialize index __i = 0 */
+                        // Initialize index __i = 0
                         emit_constant(NUMBER_VAL(0));
 
                         xen_token idx_token;
@@ -1280,10 +1280,10 @@ static void for_statement() {
 
                         consume(TOKEN_RIGHT_PAREN, "expected ')' after array expression");
 
-                        /* loop_start */
+                        // loop_start
                         i32 loop_start = current_chunk()->count;
 
-                        /* condition: __i < __len */
+                        // condition: __i < __len
                         emit_bytes(OP_GET_LOCAL, idx_slot);
                         emit_bytes(OP_GET_LOCAL, len_slot);
                         emit_byte(OP_LESS);
@@ -1291,7 +1291,7 @@ static void for_statement() {
                         i32 exit_jump = emit_jump(OP_JUMP_IF_FALSE);
                         emit_byte(OP_POP);
 
-                        /* Declare loop variable and set to __arr[__i] */
+                        // Declare loop variable and set to __arr[__i]
                         emit_bytes(OP_GET_LOCAL, arr_slot);
                         emit_bytes(OP_GET_LOCAL, idx_slot);
                         emit_byte(OP_ARRAY_GET);
@@ -1299,14 +1299,14 @@ static void for_statement() {
                         add_local(loop_var, XEN_FALSE);
                         mark_initialized();
 
-                        /* body */
+                        // body
                         statement();
 
-                        /* Pop the loop variable (it goes out of scope each iteration) */
+                        // Pop the loop variable (it goes out of scope each iteration)
                         emit_byte(OP_POP);
                         current->local_count--;
 
-                        /* increment: __i = __i + 1 */
+                        // increment: __i = __i + 1
                         emit_bytes(OP_GET_LOCAL, idx_slot);
                         emit_constant(NUMBER_VAL(1));
                         emit_byte(OP_ADD);
@@ -1322,14 +1322,14 @@ static void for_statement() {
                         return;
                     }
                 } else {
-                    /* It's C-style: for (var i = ...; ...; ...) */
-                    /* We've consumed '(', 'var', identifier */
-                    /* The identifier is a variable declaration, continue from here */
+                    // It's C-style: for (var i = ...; ...; ...)
+                    // We've consumed '(', 'var', identifier
+                    // The identifier is a variable declaration, continue from here
 
                     begin_scope();
 
-                    /* We already have the identifier in parser.previous */
-                    /* Declare it as a local */
+                    // We already have the identifier in parser.previous
+                    // Declare it as a local
                     xen_token var_name = parser.previous;
                     add_local(var_name, XEN_FALSE);
 
@@ -1341,7 +1341,7 @@ static void for_statement() {
                     consume(TOKEN_SEMICOLON, "expected ';' after variable declaration");
                     mark_initialized();
 
-                    /* Now continue with normal C-style for loop */
+                    // Now continue with normal C-style for loop
                     i32 loop_start = current_chunk()->count;
 
                     i32 exit_jump = -1;
@@ -1379,15 +1379,15 @@ static void for_statement() {
 
         /* If we get here, it's a C-style for loop without 'var',
          * or we've already consumed '(' */
-        /* Handle: for (; cond; incr) or for (expr; cond; incr) */
+        // Handle: for (; cond; incr) or for (expr; cond; incr)
 
         begin_scope();
 
-        /* initializer - we already consumed '(' */
+        // initializer - we already consumed '('
         if (match_token(TOKEN_SEMICOLON)) {
-            /* no initializer */
+            // no initializer
         } else {
-            /* expression statement as initializer */
+            // expression statement as initializer
             expression();
             consume(TOKEN_SEMICOLON, "expected ';' after loop initializer");
             emit_byte(OP_POP);

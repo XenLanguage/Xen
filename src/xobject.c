@@ -179,7 +179,7 @@ xen_value xen_obj_array_get(xen_obj_array* arr, i32 index) {
 
 void xen_obj_array_set(xen_obj_array* arr, i32 index, xen_value value) {
     if (index < 0 || index >= arr->array.count) {
-        return; /* out of bounds - silently fail for now */
+        return; // out of bounds - silently fail for now
     }
     arr->array.values[index] = value;
 }
@@ -209,7 +209,7 @@ xen_obj_bound_method* xen_obj_bound_method_new(xen_value receiver, xen_native_fn
 
 // clang-format off
 static xen_method_entry string_methods[] = {
-     {"len",         xen_str_len,         XEN_TRUE},   /* property */
+     {"len",         xen_str_len,         XEN_TRUE},   // property
      {"upper",       xen_str_upper,       XEN_FALSE},
      {"lower",       xen_str_lower,       XEN_FALSE},
      {"trim",        xen_str_trim,        XEN_FALSE},
@@ -224,11 +224,11 @@ static xen_method_entry string_methods[] = {
 };
 
 static xen_method_entry array_methods[] = {
-     {"len",       xen_arr_len,       XEN_TRUE},   /* property */
+     {"len",       xen_arr_len,       XEN_TRUE},   // property
      {"push",      xen_arr_push,      XEN_FALSE},
      {"pop",       xen_arr_pop,       XEN_FALSE},
-     {"first",     xen_arr_first,     XEN_TRUE},   /* property */
-     {"last",      xen_arr_last,      XEN_TRUE},   /* property */
+     {"first",     xen_arr_first,     XEN_TRUE},   // property
+     {"last",      xen_arr_last,      XEN_TRUE},   // property
      {"clear",     xen_arr_clear,     XEN_FALSE},
      {"contains",  xen_arr_contains,  XEN_FALSE},
      {"index_of",  xen_arr_index_of,  XEN_FALSE},
