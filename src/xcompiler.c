@@ -1522,7 +1522,6 @@ static void function(xen_function_type type) {
         // Single expression body, implicit return
         expression();
         emit_byte(OP_RETURN);
-        consume(TOKEN_SEMICOLON, "expected ';' after arrow function");
     } else {
         // Traditional block body
         consume(TOKEN_LEFT_BRACE, "expected '{' before function body");
