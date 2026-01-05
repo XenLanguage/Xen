@@ -173,6 +173,7 @@ void xen_builtins_register() {
     xen_vm_register_namespace("string", OBJ_VAL(xen_builtin_string()));
     xen_vm_register_namespace("datetime", OBJ_VAL(xen_builtin_datetime()));
     xen_vm_register_namespace("array", OBJ_VAL(xen_builtin_array()));
+    xen_vm_register_namespace("os", OBJ_VAL(xen_builtin_os()));
 
     // register globals
     define_native_fn("typeof", xen_builtin_typeof);
@@ -307,8 +308,6 @@ xen_obj_namespace* xen_builtin_math() {
 static xen_value io_println(i32 argc, xen_value* args) {
     for (i32 i = 0; i < argc; i++) {
         xen_value_print(args[i]);
-        if (i < argc - 1)
-            printf(" ");
     }
     printf("\n");
     return NULL_VAL;
@@ -338,7 +337,19 @@ static xen_value io_input(i32 argc, xen_value* args) {
     return NULL_VAL;
 }
 
-static xen_value io_readtxt(i32 argc, xen_value* args) {
+xen_obj_namespace* xen_builtin_io() {
+    xen_obj_namespace* io = xen_obj_namespace_new("io");
+    xen_obj_namespace_set(io, "println", OBJ_VAL(xen_obj_native_func_new(io_println, "println")));
+    xen_obj_namespace_set(io, "print", OBJ_VAL(xen_obj_native_func_new(io_print, "print")));
+    xen_obj_namespace_set(io, "input", OBJ_VAL(xen_obj_native_func_new(io_input, "input")));
+    return io;
+}
+
+// ============================================================================
+// OS namespace
+// ============================================================================
+
+static xen_value os_readtxt(i32 argc, xen_value* args) {
     if (argc != 1) {
         xen_runtime_error("io_readtxt() takes one argument (filename)");
         return NULL_VAL;
@@ -371,7 +382,7 @@ static xen_value io_readtxt(i32 argc, xen_value* args) {
     }
 }
 
-static xen_value io_readlines(i32 argc, xen_value* args) {
+static xen_value os_readlines(i32 argc, xen_value* args) {
     if (argc != 1) {
         xen_runtime_error("io_readlines() takes one argument (filename)");
         return NULL_VAL;
@@ -403,14 +414,67 @@ static xen_value io_readlines(i32 argc, xen_value* args) {
     }
 }
 
-xen_obj_namespace* xen_builtin_io() {
-    xen_obj_namespace* io = xen_obj_namespace_new("io");
-    xen_obj_namespace_set(io, "println", OBJ_VAL(xen_obj_native_func_new(io_println, "println")));
-    xen_obj_namespace_set(io, "print", OBJ_VAL(xen_obj_native_func_new(io_print, "print")));
-    xen_obj_namespace_set(io, "input", OBJ_VAL(xen_obj_native_func_new(io_input, "input")));
-    xen_obj_namespace_set(io, "readtxt", OBJ_VAL(xen_obj_native_func_new(io_readtxt, "readtxt")));
-    xen_obj_namespace_set(io, "readlines", OBJ_VAL(xen_obj_native_func_new(io_readlines, "readlines")));
-    return io;
+static xen_value os_exit(i32 argc, xen_value* args) {
+    i32 exit_code = 0;
+    if (argc > 0 && VAL_IS_NUMBER(args[0]))
+        exit_code = (i32)VAL_AS_NUMBER(args[0]);
+
+    printf("Xen was terminated with exit code %d\n", exit_code);
+    exit(exit_code);
+
+    return NULL_VAL;
+}
+
+// Signature: os.exec( cmd, args[] ) => exit_code
+// TODO: This uses system and is quite unsafe, need to refactor to use fork instead
+static xen_value os_exec(i32 argc, xen_value* args) {
+    if (argc < 1) {
+        xen_runtime_error("os.exec() requires at least one argument");
+        return NULL_VAL;
+    }
+
+    if (!OBJ_IS_STRING(args[0])) {
+        xen_runtime_error("first argument must be a string");
+        return NULL_VAL;
+    }
+
+    xen_obj_str* cmd = OBJ_AS_STRING(args[0]);
+
+    i32 args_count = 0;
+    if (argc == 2 && OBJ_IS_ARRAY(args[1])) {
+        args_count = OBJ_AS_ARRAY(args[1])->array.count;
+    }
+
+    char cmd_buffer[XEN_STRBUF_SIZE] = {'\0'};
+    size_t offset                    = 0;
+    memcpy(cmd_buffer, cmd->str, cmd->length);
+    cmd_buffer[cmd->length + 1] = ' ';  // add a space after the command
+    offset += cmd->length + 1;
+
+    if (args_count > 0) {
+        xen_obj_array* args_arr = OBJ_AS_ARRAY(args[1]);
+        for (i32 i = 0; i < args_count; i++) {
+            xen_value arg = args_arr->array.values[i];
+            if (OBJ_IS_STRING(arg)) {
+                const char* arg_str = OBJ_AS_CSTRING(arg);
+                memcpy(cmd_buffer + offset, arg_str, strlen(arg_str));
+                cmd_buffer[strlen(arg_str) + 1] = ' ';
+                offset += strlen(arg_str) + 1;
+            }
+        }
+    }
+
+    i32 exit_code = system(cmd_buffer);
+    return NUMBER_VAL(exit_code);
+}
+
+xen_obj_namespace* xen_builtin_os() {
+    xen_obj_namespace* os = xen_obj_namespace_new("os");
+    xen_obj_namespace_set(os, "readtxt", OBJ_VAL(xen_obj_native_func_new(os_readtxt, "readtxt")));
+    xen_obj_namespace_set(os, "readlines", OBJ_VAL(xen_obj_native_func_new(os_readlines, "readlines")));
+    xen_obj_namespace_set(os, "exit", OBJ_VAL(xen_obj_native_func_new(os_exit, "exit")));
+    xen_obj_namespace_set(os, "exec", OBJ_VAL(xen_obj_native_func_new(os_exec, "exec")));
+    return os;
 }
 
 // ============================================================================
@@ -619,14 +683,14 @@ xen_obj_namespace* xen_builtin_string() {
 // ============================================================================
 
 static xen_value time_now(i32 argc, xen_value* args) {
-    (void)argc;
-    (void)args;
+    XEN_UNUSED(argc);
+    XEN_UNUSED(args);
     return NUMBER_VAL((f64)time(NULL));
 }
 
 static xen_value time_clock(i32 argc, xen_value* args) {
-    (void)argc;
-    (void)args;
+    XEN_UNUSED(argc);
+    XEN_UNUSED(args);
     return NUMBER_VAL((f64)clock() / CLOCKS_PER_SEC);
 }
 

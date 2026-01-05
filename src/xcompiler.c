@@ -77,6 +77,7 @@ static const char* builtin_namespaces[] = {
   "string",
   "datetime",
   "array",
+  "os",
   NULL,  // sentinel
 };
 

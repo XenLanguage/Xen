@@ -2,6 +2,7 @@
 #define X_BUILTIN_H
 
 #include "xcommon.h"
+#include "xvalue.h"
 #include "xvm.h"
 
 void xen_builtins_register();
@@ -12,6 +13,7 @@ xen_obj_namespace* xen_builtin_io();
 xen_obj_namespace* xen_builtin_string();
 xen_obj_namespace* xen_builtin_datetime();
 xen_obj_namespace* xen_builtin_array();
+xen_obj_namespace* xen_builtin_os();
 
 /* ============================================================================
  * exposed method functions (shared between namespaces and type methods)

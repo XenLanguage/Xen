@@ -1,6 +1,7 @@
 #include "xvalue.h"
 #include "xmem.h"
 #include "xobject.h"
+#include "math.h"
 
 bool xen_value_equal(xen_value a, xen_value b) {
     if (a.type != b.type)
@@ -104,15 +105,17 @@ void xen_value_print(xen_value value) {
             printf("null");
             break;
         case VAL_NUMBER: {
+            f64 num = VAL_AS_NUMBER(value);
             char buffer[64];
-            snprintf(buffer, sizeof buffer, "%.15f", VAL_AS_NUMBER(value));
-
-            char* p = buffer + strlen(buffer) - 1;
-            while (*p == '0')
-                *p-- = '\0';
-            if (*p == '.')
-                *p = '\0';
-
+            snprintf(buffer, sizeof(buffer), "%.17g", num);
+            if (strchr(buffer, 'e') && fabs(num) < 1.0 && fabs(num) > 1e-10) {
+                snprintf(buffer, sizeof(buffer), "%.17f", num);
+                char* end = buffer + strlen(buffer) - 1;
+                while (end > buffer && *end == '0')
+                    *end-- = '\0';
+                if (end > buffer && *end == '.')
+                    *end = '\0';
+            }
             printf("%s", buffer);
             break;
         }
