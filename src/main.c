@@ -185,7 +185,7 @@ static void print_help() {
     printf(COLOR_BOLD COLOR_BRIGHT_BLUE "Xen" COLOR_RESET COLOR_DIM " - Copyright (C) 2025 Jake Rieger\n" COLOR_RESET);
     printf(COLOR_DIM "version " COLOR_RESET COLOR_BOLD VERSION_STRING_FULL COLOR_RESET "\n\n");
     printf("USAGE\n");
-    printf("  xl  " COLOR_DIM "-or-" COLOR_RESET "  xl <filename>\n\n");
+    printf("  xen  " COLOR_DIM "-or-" COLOR_RESET "  xen <filename>\n\n");
     printf("ARGUMENTS\n");
     printf("  -h, --help  Show this help page\n");
     printf("\n");
