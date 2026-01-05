@@ -49,4 +49,12 @@ xen_value xen_num_ceil(i32 argc, xen_value* args);
 xen_value xen_num_round(i32 argc, xen_value* args);
 xen_value xen_num_to_string(i32 argc, xen_value* args);
 
+// Dictionary methods
+xen_value xen_dict_len(i32 argc, xen_value* args);
+xen_value xen_dict_keys(i32 argc, xen_value* args);
+xen_value xen_dict_values(i32 argc, xen_value* args);
+xen_value xen_dict_has(i32 argc, xen_value* args);
+xen_value xen_dict_remove(i32 argc, xen_value* args);
+xen_value xen_dict_clear(i32 argc, xen_value* args);
+
 #endif

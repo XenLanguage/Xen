@@ -821,4 +821,74 @@ xen_value xen_num_to_string(i32 argc, xen_value* args) {
     return OBJ_VAL(xen_obj_str_copy(buffer, len));
 }
 
+// ============================================================================
+// Dictionary methods (exposed for type methods)
+// ============================================================================
 
+xen_value xen_dict_len(i32 argc, xen_value* args) {
+    if (argc < 1 || !OBJ_IS_DICT(args[0]))
+        return NUMBER_VAL(0);
+    xen_obj_dict* dict = OBJ_AS_DICT(args[0]);
+    return NUMBER_VAL(dict->table.count);
+}
+
+xen_value xen_dict_keys(i32 argc, xen_value* args) {
+    if (argc < 1 || !OBJ_IS_DICT(args[0]))
+        return NULL_VAL;
+
+    xen_obj_dict* dict  = OBJ_AS_DICT(args[0]);
+    xen_obj_array* keys = xen_obj_array_new();
+
+    for (i32 i = 0; i < dict->table.capacity; i++) {
+        xen_table_entry* entry = &dict->table.entries[i];
+        if (entry->key != NULL) {
+            xen_obj_array_push(keys, OBJ_VAL(entry->key));
+        }
+    }
+
+    return OBJ_VAL(keys);
+}
+
+xen_value xen_dict_values(i32 argc, xen_value* args) {
+    if (argc < 1 || !OBJ_IS_DICT(args[0]))
+        return NULL_VAL;
+
+    xen_obj_dict* dict    = OBJ_AS_DICT(args[0]);
+    xen_obj_array* values = xen_obj_array_new();
+
+    for (i32 i = 0; i < dict->table.capacity; i++) {
+        xen_table_entry* entry = &dict->table.entries[i];
+        if (entry->key != NULL) {
+            xen_obj_array_push(values, entry->value);
+        }
+    }
+
+    return OBJ_VAL(values);
+}
+
+xen_value xen_dict_has(i32 argc, xen_value* args) {
+    if (argc < 2 || !OBJ_IS_DICT(args[0]))
+        return BOOL_VAL(XEN_FALSE);
+
+    xen_obj_dict* dict = OBJ_AS_DICT(args[0]);
+    xen_value dummy;
+    return BOOL_VAL(xen_obj_dict_get(dict, args[1], &dummy));
+}
+
+xen_value xen_dict_remove(i32 argc, xen_value* args) {
+    if (argc < 2 || !OBJ_IS_DICT(args[0]))
+        return BOOL_VAL(XEN_FALSE);
+
+    xen_obj_dict* dict = OBJ_AS_DICT(args[0]);
+    return BOOL_VAL(xen_obj_dict_delete(dict, args[1]));
+}
+
+xen_value xen_dict_clear(i32 argc, xen_value* args) {
+    if (argc < 1 || !OBJ_IS_DICT(args[0]))
+        return NULL_VAL;
+
+    xen_obj_dict* dict = OBJ_AS_DICT(args[0]);
+    xen_table_free(&dict->table);
+    xen_table_init(&dict->table);
+    return NULL_VAL;
+}

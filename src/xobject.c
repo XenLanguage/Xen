@@ -30,7 +30,7 @@ void xen_obj_print(xen_value value) {
             print_function(OBJ_AS_FUNCTION(value));
         } break;
         case OBJ_NATIVE_FUNC: {
-            printf("<Function xstd::%s>", OBJ_AS_NATIVE_FUNC(value)->name);
+            printf("<Function ::%s>", OBJ_AS_NATIVE_FUNC(value)->name);
         } break;
         case OBJ_NAMESPACE: {
             printf("<Namespace %s>", OBJ_AS_NAMESPACE(value)->name);
@@ -53,6 +53,26 @@ void xen_obj_print(xen_value value) {
             printf("<BoundMethod %s>", OBJ_AS_BOUND_METHOD(value)->name);
             break;
         }
+        case OBJ_DICT: {
+            printf("{ ");
+            xen_obj_dict* dict = OBJ_AS_DICT(value);
+            bool first         = XEN_TRUE;
+            for (i32 i = 0; i < dict->table.capacity; i++) {
+                xen_table_entry* entry = &dict->table.entries[i];
+                if (entry->key != NULL) {
+                    if (!first)
+                        printf(", ");
+                    printf("\"%s\": ", entry->key->str);
+                    xen_value_print(entry->value);
+                    first = XEN_FALSE;
+                }
+            }
+            printf(" }");
+            break;
+        }
+        case OBJ_CLASS:
+        case OBJ_INSTANCE:
+            break;
     }
 }
 
@@ -179,7 +199,7 @@ xen_value xen_obj_array_get(xen_obj_array* arr, i32 index) {
 
 void xen_obj_array_set(xen_obj_array* arr, i32 index, xen_value value) {
     if (index < 0 || index >= arr->array.count) {
-        return; // out of bounds - silently fail for now
+        return;  // out of bounds - silently fail for now
     }
     arr->array.values[index] = value;
 }
@@ -245,6 +265,16 @@ static xen_method_entry number_methods[] = {
      {"to_string", xen_num_to_string, XEN_FALSE},
      {NULL,        NULL,              XEN_FALSE}
 };
+
+static xen_method_entry dict_methods[] = {
+     {"len",       xen_dict_len,      XEN_TRUE},   // property
+     {"keys",      xen_dict_keys,     XEN_FALSE},
+     {"values",    xen_dict_values,   XEN_FALSE},
+     {"has",       xen_dict_has,      XEN_FALSE},
+     {"remove",    xen_dict_remove,   XEN_FALSE},
+     {"clear",     xen_dict_clear,    XEN_FALSE},
+     {NULL,        NULL,              XEN_FALSE}
+};
 // clang-format on
 
 static xen_native_fn lookup_in_table(xen_method_entry* table, const char* name, bool* is_property) {
@@ -275,7 +305,41 @@ xen_native_fn xen_lookup_method(xen_value value, const char* name, bool* is_prop
             return lookup_in_table(string_methods, name, is_property);
         case OBJ_ARRAY:
             return lookup_in_table(array_methods, name, is_property);
+        case OBJ_DICT:
+            return lookup_in_table(dict_methods, name, is_property);
         default:
             return NULL;
     }
+}
+
+xen_obj_dict* xen_obj_dict_new() {
+    xen_obj_dict* dict = ALLOCATE_OBJ(xen_obj_dict, OBJ_DICT);
+    xen_table_init(&dict->table);
+    return dict;
+}
+
+void xen_obj_dict_set(xen_obj_dict* dict, xen_value key, xen_value value) {
+    // For now, only allow string keys (simplest approach)
+    if (!OBJ_IS_STRING(key)) {
+        xen_runtime_error("dictionary keys must be strings");
+        return;
+    }
+    xen_obj_str* key_str = OBJ_AS_STRING(key);
+    xen_table_set(&dict->table, key_str, value);
+}
+
+bool xen_obj_dict_get(xen_obj_dict* dict, xen_value key, xen_value* out) {
+    if (!OBJ_IS_STRING(key)) {
+        return XEN_FALSE;
+    }
+    xen_obj_str* key_str = OBJ_AS_STRING(key);
+    return xen_table_get(&dict->table, key_str, out);
+}
+
+bool xen_obj_dict_delete(xen_obj_dict* dict, xen_value key) {
+    if (!OBJ_IS_STRING(key)) {
+        return XEN_FALSE;
+    }
+    xen_obj_str* key_str = OBJ_AS_STRING(key);
+    return xen_table_delete(&dict->table, key_str);
 }

@@ -413,7 +413,7 @@ static xen_exec_result run() {
                 if (method != NULL) {
                     // build args array: [ receiver, arg1, arg2, ... ]
                     xen_value* args  = g_vm.stack_top - arg_count - 1;
-                    xen_value result = method(arg_count + 1, args); // +1 for receiver
+                    xen_value result = method(arg_count + 1, args);  // +1 for receiver
                     // pop args and receiver, push result
                     g_vm.stack_top -= arg_count + 1;
                     stack_push(result);
@@ -435,58 +435,6 @@ static xen_exec_result run() {
                 stack_push(OBJ_VAL(arr));
                 break;
             }
-            case OP_ARRAY_GET: {
-                // stack: [array, index] -> [value]
-                xen_value index_val = stack_pop();
-                xen_value array_val = stack_pop();
-
-                if (!OBJ_IS_ARRAY(array_val)) {
-                    runtime_error("can only index into arrays");
-                    return EXEC_RUNTIME_ERROR;
-                }
-                if (!VAL_IS_NUMBER(index_val)) {
-                    runtime_error("array index must be a number");
-                    return EXEC_RUNTIME_ERROR;
-                }
-
-                xen_obj_array* arr = OBJ_AS_ARRAY(array_val);
-                i32 index          = (i32)VAL_AS_NUMBER(index_val);
-
-                if (index < 0 || index >= arr->array.count) {
-                    runtime_error("array index %d is out of bounds (length %d)", index, arr->array.count);
-                    return EXEC_RUNTIME_ERROR;
-                }
-
-                stack_push(arr->array.values[index]);
-                break;
-            }
-            case OP_ARRAY_SET: {
-                // stack: [array, index, value] -> [value]
-                xen_value value     = stack_pop();
-                xen_value index_val = stack_pop();
-                xen_value array_val = stack_pop();
-
-                if (!OBJ_IS_ARRAY(array_val)) {
-                    runtime_error("can only index into arrays");
-                    return EXEC_RUNTIME_ERROR;
-                }
-                if (!VAL_IS_NUMBER(index_val)) {
-                    runtime_error("array index must be a number");
-                    return EXEC_RUNTIME_ERROR;
-                }
-
-                xen_obj_array* arr = OBJ_AS_ARRAY(array_val);
-                i32 index          = (i32)VAL_AS_NUMBER(index_val);
-
-                if (index < 0 || index >= arr->array.count) {
-                    runtime_error("array index %d out of bounds (length %d)", index, arr->array.count);
-                    return EXEC_RUNTIME_ERROR;
-                }
-
-                arr->array.values[index] = value;
-                stack_push(value); // assignment is an expression, leaves value on stack
-                break;
-            }
             case OP_ARRAY_LEN: {
                 xen_value array_val = stack_pop();
                 if (!OBJ_IS_ARRAY(array_val)) {
@@ -495,6 +443,107 @@ static xen_exec_result run() {
                 }
                 xen_obj_array* arr = OBJ_AS_ARRAY(array_val);
                 stack_push(NUMBER_VAL(arr->array.count));
+                break;
+            }
+            case OP_DICT_NEW: {
+                stack_push(OBJ_VAL(xen_obj_dict_new()));
+                break;
+            }
+            case OP_DICT_ADD: {
+                // stack: [dict, key, value] -> [dict]
+                xen_value value    = stack_pop();
+                xen_value key      = stack_pop();
+                xen_value dict_val = peek(0);  // keep dict on stack for next pair
+
+                if (!OBJ_IS_DICT(dict_val)) {
+                    runtime_error("expected dictionary");
+                    return EXEC_RUNTIME_ERROR;
+                }
+
+                xen_obj_dict* dict = OBJ_AS_DICT(dict_val);
+                xen_obj_dict_set(dict, key, value);
+                break;
+            }
+            case OP_INDEX_GET: {
+                // stack: [container, index/key] -> [value]
+                xen_value index     = stack_pop();
+                xen_value container = stack_pop();
+
+                if (OBJ_IS_ARRAY(container)) {
+                    if (!VAL_IS_NUMBER(index)) {
+                        runtime_error("array index must be a number");
+                        return EXEC_RUNTIME_ERROR;
+                    }
+                    xen_obj_array* arr = OBJ_AS_ARRAY(container);
+                    i32 idx            = (i32)VAL_AS_NUMBER(index);
+
+                    if (idx < 0 || idx >= arr->array.count) {
+                        runtime_error("array index %d out of bounds (length %d)", idx, arr->array.count);
+                        return EXEC_RUNTIME_ERROR;
+                    }
+
+                    stack_push(arr->array.values[idx]);
+                } else if (OBJ_IS_DICT(container)) {
+                    xen_obj_dict* dict = OBJ_AS_DICT(container);
+                    xen_value result;
+
+                    if (!xen_obj_dict_get(dict, index, &result)) {
+                        // key not found
+                        runtime_error("key '%s' does not exist", OBJ_AS_CSTRING(index));
+                        return EXEC_RUNTIME_ERROR;
+                    } else {
+                        stack_push(result);
+                    }
+                } else if (OBJ_IS_STRING(container)) {
+                    xen_obj_str* str = OBJ_AS_STRING(container);
+                    i32 idx          = (i32)VAL_AS_NUMBER(index);
+
+                    if (idx > str->length - 1) {
+                        runtime_error("character index %d out of bounds (length %d)", idx, str->length - 1);
+                        return EXEC_RUNTIME_ERROR;
+                    }
+
+                    stack_push(OBJ_VAL(xen_obj_str_copy(&str->str[idx], 1)));
+                } else {
+                    runtime_error("can only index array and dictionaries");
+                    return EXEC_RUNTIME_ERROR;
+                }
+
+                break;
+            }
+            case OP_INDEX_SET: {
+                // stack: [container, index/key, value] -> [value]
+                xen_value value     = stack_pop();
+                xen_value index     = stack_pop();
+                xen_value container = stack_pop();
+
+                if (OBJ_IS_ARRAY(container)) {
+                    // array assignment - index must be a number
+                    if (!VAL_IS_NUMBER(index)) {
+                        runtime_error("array index must be a number");
+                        return EXEC_RUNTIME_ERROR;
+                    }
+                    xen_obj_array* arr = OBJ_AS_ARRAY(container);
+                    i32 idx            = (i32)VAL_AS_NUMBER(index);
+
+                    if (idx < 0 || idx >= arr->array.count) {
+                        runtime_error("array index %d out of bounds (length %d)", idx, arr->array.count);
+                        return EXEC_RUNTIME_ERROR;
+                    }
+                    arr->array.values[idx] = value;
+
+                } else if (OBJ_IS_DICT(container)) {
+                    // dictionary assignment - creates or updates key
+                    xen_obj_dict* dict = OBJ_AS_DICT(container);
+                    xen_obj_dict_set(dict, index, value);
+
+                } else {
+                    runtime_error("can only perform index assignments on arrays and dictionaries");
+                    return EXEC_RUNTIME_ERROR;
+                }
+
+                // assignment is an expression - leave value on stack
+                stack_push(value);
                 break;
             }
             default: {

@@ -3,6 +3,7 @@
 
 #include "xvalue.h"
 #include "xchunk.h"
+#include "xtable.h"
 
 typedef enum {
     OBJ_STRING,
@@ -10,7 +11,10 @@ typedef enum {
     OBJ_NATIVE_FUNC,
     OBJ_NAMESPACE,
     OBJ_ARRAY,
-    OBJ_BOUND_METHOD, // for property access that returns a callable
+    OBJ_BOUND_METHOD,  // for property access that returns a callable
+    OBJ_DICT,
+    OBJ_CLASS,
+    OBJ_INSTANCE,
 } xen_obj_type;
 
 struct xen_obj {
@@ -60,9 +64,14 @@ struct xen_obj_array {
 
 struct xen_obj_bound_method {
     xen_obj obj;
-    xen_value receiver;   // The object the method is bound to
-    xen_native_fn method; // The native method function
-    const char* name;     // Method name for debugging
+    xen_value receiver;    // The object the method is bound to
+    xen_native_fn method;  // The native method function
+    const char* name;      // Method name for debugging
+};
+
+struct xen_obj_dict {
+    xen_obj obj;
+    xen_table table;
 };
 
 #define OBJ_TYPE(v) (VAL_AS_OBJ(v)->type)
@@ -85,6 +94,9 @@ struct xen_obj_bound_method {
 
 #define OBJ_IS_BOUND_METHOD(v) xen_obj_is_type(v, OBJ_BOUND_METHOD)
 #define OBJ_AS_BOUND_METHOD(v) ((xen_obj_bound_method*)VAL_AS_OBJ(v))
+
+#define OBJ_IS_DICT(value) xen_obj_is_type(value, OBJ_DICT)
+#define OBJ_AS_DICT(value) ((xen_obj_dict*)VAL_AS_OBJ(value))
 
 bool xen_obj_is_type(xen_value value, xen_obj_type type);
 void xen_obj_print(xen_value value);
@@ -114,10 +126,15 @@ xen_obj_bound_method* xen_obj_bound_method_new(xen_value receiver, xen_native_fn
 typedef struct {
     const char* name;
     xen_native_fn method;
-    bool is_property; // true = no parens needed (e.g., .len), false = callable
+    bool is_property;  // true = no parens needed (e.g., .len), false = callable
 } xen_method_entry;
 
 // Lookup a method on a value by name. Returns NULL if not found.
 xen_native_fn xen_lookup_method(xen_value value, const char* name, bool* is_property);
+
+xen_obj_dict* xen_obj_dict_new();
+void xen_obj_dict_set(xen_obj_dict* dict, xen_value key, xen_value value);
+bool xen_obj_dict_get(xen_obj_dict* dict, xen_value key, xen_value* out);
+bool xen_obj_dict_delete(xen_obj_dict* dict, xen_value key);
 
 #endif

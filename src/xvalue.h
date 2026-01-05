@@ -17,6 +17,7 @@ typedef struct xen_ns_entry          xen_ns_entry;
 typedef struct xen_obj_namespace     xen_obj_namespace;
 typedef struct xen_obj_array         xen_obj_array;
 typedef struct xen_obj_bound_method  xen_obj_bound_method;
+typedef struct xen_obj_dict          xen_obj_dict;
 // clang-format on
 
 typedef enum {

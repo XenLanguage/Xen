@@ -33,11 +33,13 @@ typedef enum {
     OP_LOOP,
     OP_INCLUDE,
     OP_GET_PROPERTY,
-    OP_INVOKE, // invoke method on value (obj.method(args))
+    OP_INVOKE,
+    OP_INDEX_GET,
+    OP_INDEX_SET,
     OP_ARRAY_NEW,
-    OP_ARRAY_GET,
-    OP_ARRAY_SET,
     OP_ARRAY_LEN,
+    OP_DICT_NEW,
+    OP_DICT_ADD,
 } xen_opcode;
 
 typedef struct {

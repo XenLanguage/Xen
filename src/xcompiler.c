@@ -7,6 +7,7 @@
 #include "xvalue.h"
 #include "xtable.h"
 #include "xvm.h"
+#include <math.h>
 
 // ============================================================================
 // Types
@@ -76,7 +77,7 @@ static const char* builtin_namespaces[] = {
   "string",
   "datetime",
   "array",
-  NULL, // sentinel
+  NULL,  // sentinel
 };
 
 static bool is_valid_namespace(const char* name, i32 length) {
@@ -193,9 +194,9 @@ static void emit_return() {
 
 static i32 emit_jump(u8 instruction) {
     emit_byte(instruction);
-    emit_byte(0xFF);                   // placeholder (will be patched)
-    emit_byte(0xFF);                   // placeholder (will be patched)
-    return current_chunk()->count - 2; // return offset location
+    emit_byte(0xFF);                    // placeholder (will be patched)
+    emit_byte(0xFF);                    // placeholder (will be patched)
+    return current_chunk()->count - 2;  // return offset location
 }
 
 static void patch_jump(i32 offset) {
@@ -422,16 +423,16 @@ static void named_variable(xen_token name, bool can_assign) {
     }
 
     if (can_assign && match_token(TOKEN_EQUAL)) {
-        parser.last_was_variable = XEN_FALSE; // consumed by assignment
+        parser.last_was_variable = XEN_FALSE;  // consumed by assignment
         expression();
         emit_bytes(set_op, (u8)arg);
     } else if (can_assign && match_token(TOKEN_PLUS_EQUAL)) {
         // i += expr  →  i = i + expr
         parser.last_was_variable = XEN_FALSE;
-        emit_bytes(get_op, (u8)arg); // push current value
-        expression();                // push increment
-        emit_byte(OP_ADD);           // add them
-        emit_bytes(set_op, (u8)arg); // store result
+        emit_bytes(get_op, (u8)arg);  // push current value
+        expression();                 // push increment
+        emit_byte(OP_ADD);            // add them
+        emit_bytes(set_op, (u8)arg);  // store result
     } else if (can_assign && match_token(TOKEN_MINUS_EQUAL)) {
         parser.last_was_variable = XEN_FALSE;
         emit_bytes(get_op, (u8)arg);
@@ -590,8 +591,8 @@ static void and_(bool can_assign) {
     XEN_UNUSED(can_assign);
     // left operand already compiled and on stack
     i32 end_jump = emit_jump(OP_JUMP_IF_FALSE);
-    emit_byte(OP_POP);          // discard left if truthy
-    parse_precedence(PREC_AND); // compile right operand
+    emit_byte(OP_POP);           // discard left if truthy
+    parse_precedence(PREC_AND);  // compile right operand
     patch_jump(end_jump);
     // if left was false, it's still on stack (short-circuit)
     // if left was true, right operand is on stack
@@ -788,9 +789,9 @@ static void subscript(bool can_assign) {
     consume(TOKEN_RIGHT_BRACKET, "expected ']' after index");
     if (can_assign && match_token(TOKEN_EQUAL)) {
         expression();
-        emit_byte(OP_ARRAY_SET);
+        emit_byte(OP_INDEX_SET);
     } else {
-        emit_byte(OP_ARRAY_GET);
+        emit_byte(OP_INDEX_GET);
     }
 }
 
@@ -801,6 +802,26 @@ static void fn_expr(bool can_assign) {
     function(TYPE_FUNCTION);
 }
 
+static void dictionary(bool can_assign) {
+    XEN_UNUSED(can_assign);
+    emit_byte(OP_DICT_NEW);
+
+    if (!check(TOKEN_RIGHT_BRACE)) {
+        do {
+            if (!check(TOKEN_STRING)) {
+                error("dictionary key must be a string");
+                return;
+            }
+            expression();  // parse string
+            consume(TOKEN_COLON, "expect ':' after dictionary key");
+            expression();  // parse value
+            emit_byte(OP_DICT_ADD);
+        } while (match_token(TOKEN_COMMA));
+    }
+
+    consume(TOKEN_RIGHT_BRACE, "expect '}' after dictionary");
+}
+
 // ============================================================================
 // Parse Rules
 // ============================================================================
@@ -809,7 +830,7 @@ static void fn_expr(bool can_assign) {
 xen_parse_rule rules[] = {
     [TOKEN_LEFT_PAREN]       = {grouping,   call,        PREC_CALL},
     [TOKEN_RIGHT_PAREN]      = {NULL,       NULL,        PREC_NONE},
-    [TOKEN_LEFT_BRACE]       = {NULL,       NULL,        PREC_NONE},
+    [TOKEN_LEFT_BRACE]       = {dictionary, NULL,        PREC_NONE},
     [TOKEN_RIGHT_BRACE]      = {NULL,       NULL,        PREC_NONE},
     [TOKEN_LEFT_BRACKET]     = {array_lit,  subscript,   PREC_CALL},
     [TOKEN_RIGHT_BRACKET]    = {NULL,       NULL,        PREC_NONE},
@@ -959,7 +980,7 @@ static void if_statement() {
 
     // emit conditional jump (will skip 'then' branch if false)
     i32 then_jump = emit_jump(OP_JUMP_IF_FALSE);
-    emit_byte(OP_POP); // pop condition from stack
+    emit_byte(OP_POP);  // pop condition from stack
 
     // compile 'then' branch
     statement();
@@ -969,7 +990,7 @@ static void if_statement() {
 
     // patch the conditional jump to land here
     patch_jump(then_jump);
-    emit_byte(OP_POP); // pop condition (for false path)
+    emit_byte(OP_POP);  // pop condition (for false path)
 
     // compile 'else' branch (if present)
     if (match_token(TOKEN_ELSE)) {
@@ -980,7 +1001,7 @@ static void if_statement() {
 }
 
 static void while_statement() {
-    i32 loop_start = current_chunk()->count; // remember where to jump back
+    i32 loop_start = current_chunk()->count;  // remember where to jump back
 
     // parse condition
     consume(TOKEN_LEFT_PAREN, "expected '(' after 'while'");
@@ -989,7 +1010,7 @@ static void while_statement() {
 
     // exit jump (when condition is false)
     i32 exit_jump = emit_jump(OP_JUMP_IF_FALSE);
-    emit_byte(OP_POP); // pop condition
+    emit_byte(OP_POP);  // pop condition
 
     // compile body
     statement();
@@ -1032,7 +1053,7 @@ static void for_in_statement() {
 
     // compile start expression and initialize loop variable
     expression();
-    mark_initialized(); // loop var is now slot (local_count - 1)
+    mark_initialized();  // loop var is now slot (local_count - 1)
     u8 loop_var_slot = (u8)(current->local_count - 1);
 
     consume(TOKEN_DOT_DOT, "expected '..' in range");
@@ -1062,7 +1083,7 @@ static void for_in_statement() {
 
     // exit jump (when condition is false)
     i32 exit_jump = emit_jump(OP_JUMP_IF_FALSE);
-    emit_byte(OP_POP); // pop condition
+    emit_byte(OP_POP);  // pop condition
 
     // compile body
     statement();
@@ -1072,14 +1093,14 @@ static void for_in_statement() {
     emit_constant(NUMBER_VAL(1));
     emit_byte(OP_ADD);
     emit_bytes(OP_SET_LOCAL, loop_var_slot);
-    emit_byte(OP_POP); // pop the result of the assignment
+    emit_byte(OP_POP);  // pop the result of the assignment
 
     // jump back to condition
     emit_loop(loop_start);
 
     // patch exit jump
     patch_jump(exit_jump);
-    emit_byte(OP_POP); // pop condition (false case)
+    emit_byte(OP_POP);  // pop condition (false case)
 
     end_scope();
 }
@@ -1088,7 +1109,7 @@ static void for_in_statement() {
  * C-style for statement: for (init; cond; incr) { body }
  */
 static void for_c_style_statement() {
-    begin_scope(); // for loop variable
+    begin_scope();  // for loop variable
     consume(TOKEN_LEFT_PAREN, "expected '(' after 'for'");
 
     // initializer clause
@@ -1146,19 +1167,19 @@ static void for_statement() {
 
     if (check(TOKEN_LEFT_PAREN)) {
         // We need to look further ahead. Let's consume '(' and check
-        advance(); // consume '('
+        advance();  // consume '('
 
         if (check(TOKEN_VAR)) {
             // Could be either "var i = ..." (C-style) or "var i in ..." (for-in)
-            advance(); // consume 'var'
+            advance();  // consume 'var'
 
             if (check(TOKEN_IDENTIFIER)) {
-                advance(); // consume identifier
+                advance();  // consume identifier
 
                 if (check(TOKEN_IN)) {
                     // It's a for-in loop: for (var i in start..end) OR for (var x in array)
                     // We've already consumed '(', 'var', and the identifier
-                    xen_token loop_var = parser.previous; // the identifier
+                    xen_token loop_var = parser.previous;  // the identifier
 
                     begin_scope();
 
@@ -1294,7 +1315,7 @@ static void for_statement() {
                         // Declare loop variable and set to __arr[__i]
                         emit_bytes(OP_GET_LOCAL, arr_slot);
                         emit_bytes(OP_GET_LOCAL, idx_slot);
-                        emit_byte(OP_ARRAY_GET);
+                        emit_byte(OP_INDEX_GET);
 
                         add_local(loop_var, XEN_FALSE);
                         mark_initialized();
