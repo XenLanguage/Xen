@@ -37,9 +37,12 @@ make_linux_rpm() {
     rpmbuild -ba $RPMBUILD_ROOT/SPECS/xen.spec
 
     cd ../RPMS
-    find . -name "Xen-$VERSION-*.rpm" ! -name "*debug*" -exec cp {} $REL_DIR/linux/Xen-$VERSION-linux-x64.rpm \;
+    OUT="$REL_DIR/linux/Xen-$VERSION-linux-x64.rpm"
+    find . -name "Xen-$VERSION-*.rpm" ! -name "*debug*" -exec cp {} $OUT \;
 
     cd $STARTUP_DIR
+
+    gpg --detach-sign --armor --output "$OUT.sig" $OUT
 }
 
 make_linux_deb() {
@@ -56,16 +59,23 @@ make_linux_deb() {
 
     dpkg-deb --build $DEB_ROOT
     rm -rf $DEB_ROOT
+
+    OUT="$REL_DIR/linux/Xen-$VERSION-linux-x64.deb"
+    gpg --detach-sign --armor --output "$OUT.sig" $OUT
 }
 
 make_linux_tarball() {
     LINUX_BIN_TAR="$REL_DIR/linux/Xen-$VERSION-linux-x64.tar.gz"
     tar -czf $LINUX_BIN_TAR bin/ examples/ README.md LICENSE
+    
+    gpg --detach-sign --armor --output "$LINUX_BIN_TAR.sig" $LINUX_BIN_TAR
 }
 
 make_windows_zip() {
     WINDOWS_BIN_ZIP="$REL_DIR/windows/Xen-$VERSION-windows-x64.zip"
     zip -r $WINDOWS_BIN_ZIP bin_win/ README.md LICENSE
+
+    gpg --detach-sign --armor --output "$WINDOWS_BIN_ZIP.sig" $WINDOWS_BIN_ZIP
 }
 
 make_windows_exe() {
@@ -73,11 +83,15 @@ make_windows_exe() {
     WINDOWS_EXE="$REL_DIR/windows/$FILENAME"
     (cd specs && wine64 /home/x/.wine/drive_c/Program\ Files\ \(x86\)/Inno\ Setup\ 6/ISCC.exe xen.iss)
     mv specs/$FILENAME "$REL_DIR/windows/"
+
+    gpg --detach-sign --armor --output "$WINDOWS_EXE.sig" $WINDOWS_EXE
 }
 
 make_source_tarball() {
     SOURCE_TAR="$REL_DIR/Xen-$VERSION.tar.gz"
     tar -czf $SOURCE_TAR src/ examples/ .clang-format README.md LICENSE Makefile
+
+    gpg --detach-sign --armor --output "$SOURCE_TAR.sig" $SOURCE_TAR
 }
 
 # Linux
@@ -89,6 +103,9 @@ make_windows_zip
 make_windows_exe
 # Source Code
 make_source_tarball
+
+# Copy verification key
+cp /home/x/public-key.asc "$REL_DIR/public_key.asc"
 
 echo ""
 echo "=== DONE ==="
