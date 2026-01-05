@@ -44,6 +44,21 @@ static xen_value xen_builtin_typeof(i32 argc, xen_value* args) {
             case OBJ_NAMESPACE:
                 type_str = "namespace";
                 break;
+            case OBJ_ARRAY:
+                type_str = "array";
+                break;
+            case OBJ_DICT:
+                type_str = "dictionary";
+                break;
+            case OBJ_CLASS:
+                type_str = "class";
+                break;
+            case OBJ_INSTANCE:
+                type_str = "instance";
+                break;
+            case OBJ_BOUND_METHOD:
+                type_str = "bound_method";
+                break;
             default:
                 type_str = "undefined";
                 break;
