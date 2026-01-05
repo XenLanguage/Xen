@@ -47,6 +47,20 @@ bool xen_value_equal(xen_value a, xen_value b) {
                     }
                     return XEN_TRUE;
                 }
+                case OBJ_DICT: {
+                    xen_obj_dict* dict_a = (xen_obj_dict*)obj_a;
+                    xen_obj_dict* dict_b = (xen_obj_dict*)obj_b;
+                    if (dict_a->table.count != dict_b->table.count)
+                        return XEN_FALSE;
+                    for (i32 i = 0; i < dict_a->table.count; i++) {
+                        if (strcmp(dict_a->table.entries[i].key->str, dict_b->table.entries[i].key->str) != 0)
+                            return XEN_FALSE;
+
+                        if (!xen_value_equal(dict_a->table.entries[i].value, dict_b->table.entries[i].value))
+                            return XEN_FALSE;
+                    }
+                    return XEN_TRUE;
+                }
                 default:
                     // Functions, namespaces, etc. - use pointer equality
                     return XEN_FALSE;
