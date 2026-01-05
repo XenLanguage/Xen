@@ -1,3 +1,4 @@
 Makefile linguist-vendored
 examples/* linguist-vendored
 scripts/* linguist-vendored
+specs/* linguist-vendored
