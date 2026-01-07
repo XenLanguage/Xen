@@ -12,9 +12,7 @@ class Counter {
         this.count = this.count + 1;
     }
 
-    fn get() {
-        return this.count;
-    }
+    fn get() => this.count
 };
 
 var c = new Counter(10);

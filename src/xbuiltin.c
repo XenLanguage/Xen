@@ -515,7 +515,7 @@ static i32 remove_directory(const char* path, bool recursive) {
             snprintf(file_path, MAX_PATH, "%s\\%s", path, find_data.cFileName);
 
             if (find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
-                remove_directory(file_path, true);  // Recursively remove subdirectories
+                remove_directory(file_path, XEN_TRUE);  // Recursively remove subdirectories
             } else {
                 unlink(file_path);
             }
@@ -607,7 +607,7 @@ static xen_value os_mkdir(int argc, xen_value* argv) {
     }
 
 #ifdef _WIN32
-    int result = mkdir(path);
+    int result = mkdir(dir, 0755);
 #else
     int result = mkdir(dir, 0755);
 #endif
