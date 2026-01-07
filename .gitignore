@@ -1,6 +1,7 @@
-bin/
-bin_win/
-obj/
-obj_win/
-releases/
+.cache/
 .vscode/
+releases/
+build/
+build.sh
+build_all.sh
+run.sh
