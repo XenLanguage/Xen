@@ -1,21 +1,27 @@
 include io;
 
+class Car {
+    year;
+    make;
+    model;
 
-class Counter {
-    private count = 0;
-
-    init(count) {
-        this.count = count;
+    init(year, make, model) {
+        this.year = year;
+        this.make = make;
+        this.model = model;
     }
 
-    fn increment() {
-        this.count = this.count + 1;
+    fn start_engine() {
+        if (this.year > 2000) { io.println("brrrrrrrrr"); }
+        else { io.println("chuggachuggachugga"); }
     }
 
-    fn get() => this.count
+    fn show_year() => this.year
 };
 
-var c = new Counter(10);
-c.increment();
-c.increment();
-io.println(c.get());
+var maserati = new Car(2019, "Maserati", "Levante");
+io.println(maserati); // <Car : instance>
+
+io.println(maserati.model); // Levante
+maserati.start_engine(); // brrrrrrrrr
+io.println(maserati.show_year()); // 2019
