@@ -1,5 +1,6 @@
 #include "xmem.h"
 #include "xerr.h"
+#include "xtable.h"
 #include "xvalue.h"
 #include "xobject.h"
 #include "xvm.h"
@@ -38,24 +39,74 @@ void xen_mem_free_objects() {
     }
 }
 
-// TODO:  (URGENT) CLEANUP THE REST OF THE OBJ TYPES
+static void free_string(const xen_obj_str* str, xen_obj* obj) {
+    XEN_FREE_ARRAY(char, str->str, str->length + 1);
+    if (obj)
+        XEN_FREE(xen_obj_str, obj);
+}
+
+static void free_class(xen_obj* obj) {
+    xen_obj_class* class = (xen_obj_class*)obj;
+    free_string(class->name, (xen_obj*)class->name);
+    XEN_FREE(xen_obj_func, class->initializer);
+    xen_table_free(&class->methods);
+    xen_table_free(&class->private_methods);
+    XEN_FREE_ARRAY(xen_property_def, class->properties, class->property_count);
+    XEN_FREE(xen_obj_class, obj);
+}
+
 static void xen_mem_free_object(xen_obj* obj) {
     switch (obj->type) {
         case OBJ_STRING: {
             const xen_obj_str* str = (xen_obj_str*)obj;
-            XEN_FREE_ARRAY(char, str->str, str->length + 1);
-            XEN_FREE(xen_obj_str, obj);
+            free_string(str, obj);
             break;
         }
-        case OBJ_FUNCTION:
-        case OBJ_NATIVE_FUNC:
-        case OBJ_NAMESPACE:
-        case OBJ_ARRAY:
-        case OBJ_BOUND_METHOD:
-        case OBJ_DICT:
-        case OBJ_CLASS:
-        case OBJ_INSTANCE:
+        case OBJ_FUNCTION: {
+            xen_obj_func* fn = (xen_obj_func*)obj;
+            xen_chunk_cleanup(&fn->chunk);
+            free_string(fn->name, (xen_obj*)fn->name);
+            XEN_FREE(xen_obj_func, fn);
+        }
+        case OBJ_NATIVE_FUNC: {
+            xen_obj_func* fn = (xen_obj_func*)obj;
+            XEN_FREE(xen_obj_func, fn);
             break;
+        }
+        case OBJ_NAMESPACE: {
+            xen_obj_namespace* ns = (xen_obj_namespace*)obj;
+            XEN_FREE_ARRAY(xen_ns_entry, ns->entries, ns->capacity);
+            XEN_FREE(xen_obj_namespace, ns);
+            break;
+        }
+        case OBJ_ARRAY: {
+            const xen_obj_array* arr = (xen_obj_array*)obj;
+            XEN_FREE_ARRAY(xen_value, arr->array.values, arr->array.cap);
+            XEN_FREE(xen_obj_array, obj);
+            break;
+        }
+        case OBJ_BOUND_METHOD: {
+            const xen_obj_bound_method* bound = (xen_obj_bound_method*)obj;
+            obj->next                         = NULL;
+            XEN_FREE(xen_obj_bound_method, obj);
+        }
+        case OBJ_DICT: {
+            xen_obj_dict* dict = (xen_obj_dict*)obj;
+            xen_table_free(&dict->table);
+            XEN_FREE(xen_obj_dict, obj);
+            break;
+        }
+        case OBJ_CLASS: {
+            free_class(obj);
+            break;
+        }
+        case OBJ_INSTANCE: {
+            xen_obj_instance* inst = (xen_obj_instance*)obj;
+            free_class((xen_obj*)inst->class);
+            XEN_FREE_ARRAY(xen_value, inst->fields, inst->class->property_count);
+            XEN_FREE(xen_obj_instance, obj);
+            break;
+        }
     }
 }
 
