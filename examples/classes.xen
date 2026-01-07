@@ -1,20 +1,23 @@
 include io;
 
+
 class Counter {
     private count = 0;
 
-    private fn inc() {
-        this.count = this.count + 1;
+    init(count) {
+        this.count = count;
     }
 
     fn increment() {
-        this.inc();
+        this.count = this.count + 1;
     }
 
-    fn get() => this.count
+    fn get() {
+        return this.count;
+    }
 };
 
-var c = new Counter();
+var c = new Counter(10);
 c.increment();
 c.increment();
 io.println(c.get());

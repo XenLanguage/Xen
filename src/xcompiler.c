@@ -199,7 +199,11 @@ static void emit_bytes(const u8 op, const u8 operand) {
 }
 
 static void emit_return() {
-    emit_byte(OP_NULL);
+    if (current->type == TYPE_INITIALIZER) {
+        emit_bytes(OP_GET_LOCAL, 0);
+    } else {
+        emit_byte(OP_NULL);
+    }
     emit_byte(OP_RETURN);
 }
 
