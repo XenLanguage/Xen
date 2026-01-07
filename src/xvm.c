@@ -118,6 +118,22 @@ static bool call_value(xen_value callee, i32 arg_count) {
     return XEN_FALSE;
 }
 
+static bool is_same_class_context(xen_obj_class* target_class) {
+    // Get the current call frame
+    xen_call_frame* frame = &g_vm.frames[g_vm.frame_count - 1];
+
+    // Check if we're in a method (slot 0 would be 'this')
+    if (frame->slots != NULL) {
+        xen_value this_val = frame->slots[0];
+        if (OBJ_IS_INSTANCE(this_val)) {
+            xen_obj_instance* this_inst = OBJ_AS_INSTANCE(this_val);
+            return this_inst->class == target_class;
+        }
+    }
+
+    return XEN_FALSE;
+}
+
 //====================================================================================================================//
 
 //====================================================================================================================//
@@ -350,19 +366,39 @@ static xen_exec_result run() {
                     xen_value value;
 
                     // First check fields
-                    if (xen_obj_instance_get(instance, name, &value)) {
-                        stack_pop();  // Pop instance
-                        stack_push(value);
-                        break;
+                    i32 prop_index = xen_find_property_index(instance->class, name);
+                    if (prop_index >= 0) {
+                        // check privacy
+                        if (instance->class->properties[prop_index].is_private) {
+                            if (!is_same_class_context(instance->class)) {
+                                runtime_error("cannot access private property '%s'", name->str);
+                                return EXEC_RUNTIME_ERROR;
+                            }
+                        }
+
+                        if (xen_obj_instance_get(instance, name, &value)) {
+                            stack_pop();  // Pop instance
+                            stack_push(value);
+                            break;
+                        }
                     }
 
                     // Then check methods
                     xen_value method;
                     if (xen_table_get(&instance->class->methods, name, &method)) {
-                        // Create bound method
                         xen_value receiver          = stack_pop();
                         xen_obj_bound_method* bound = xen_obj_bound_method_new_func(receiver, OBJ_AS_FUNCTION(method));
-                        // Store the actual function
+                        stack_push(OBJ_VAL(bound));
+                        break;
+                    }
+
+                    if (xen_table_get(&instance->class->private_methods, name, &method)) {
+                        if (!is_same_class_context(instance->class)) {
+                            runtime_error("cannot access private method '%s'", name->str);
+                            return EXEC_RUNTIME_ERROR;
+                        }
+                        xen_value receiver          = stack_pop();
+                        xen_obj_bound_method* bound = xen_obj_bound_method_new_func(receiver, OBJ_AS_FUNCTION(method));
                         stack_push(OBJ_VAL(bound));
                         break;
                     }
@@ -420,6 +456,18 @@ static xen_exec_result run() {
                     xen_value method;
 
                     if (xen_table_get(&instance->class->methods, method_name, &method)) {
+                        if (!call(OBJ_AS_FUNCTION(method), arg_count)) {
+                            return EXEC_RUNTIME_ERROR;
+                        }
+                        frame = &g_vm.frames[g_vm.frame_count - 1];
+                        break;
+                    }
+
+                    if (xen_table_get(&instance->class->private_methods, method_name, &method)) {
+                        if (!is_same_class_context(instance->class)) {
+                            runtime_error("cannot access private method '%s'", method_name->str);
+                            return EXEC_RUNTIME_ERROR;
+                        }
                         if (!call(OBJ_AS_FUNCTION(method), arg_count)) {
                             return EXEC_RUNTIME_ERROR;
                         }
@@ -675,6 +723,13 @@ static xen_exec_result run() {
                 }
 
                 xen_obj_instance* instance = OBJ_AS_INSTANCE(inst_val);
+
+                if (xen_obj_class_is_property_private(instance->class, name)) {
+                    if (!is_same_class_context(instance->class)) {
+                        runtime_error("cannot access private property '%s'", name->str);
+                        return EXEC_RUNTIME_ERROR;
+                    }
+                }
 
                 if (!xen_obj_instance_set(instance, name, value)) {
                     runtime_error("undefined property '%s'", name->str);

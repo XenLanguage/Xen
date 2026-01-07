@@ -180,4 +180,7 @@ xen_obj_instance* xen_obj_instance_new(xen_obj_class* class);
 bool xen_obj_instance_get(xen_obj_instance* inst, xen_obj_str* name, xen_value* out);
 bool xen_obj_instance_set(xen_obj_instance* inst, xen_obj_str* name, xen_value value);
 
+i32 xen_find_property_index(xen_obj_class* class, xen_obj_str* name);
+bool xen_obj_class_is_property_private(xen_obj_class* class, xen_obj_str* name);
+
 #endif

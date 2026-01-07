@@ -3,13 +3,15 @@ include io;
 class Counter {
     private count = 0;
 
-    fn increment() {
+    private fn inc() {
         this.count = this.count + 1;
     }
 
-    fn get() {
-        return this.count;
+    fn increment() {
+        this.inc();
     }
+
+    fn get() => this.count
 };
 
 var c = new Counter();

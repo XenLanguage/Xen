@@ -1605,9 +1605,17 @@ static void method(xen_function_type type) {
         } while (match_token(TOKEN_COMMA));
     }
 
-    consume(TOKEN_RIGHT_PAREN, "expect ')' after parameters");
-    consume(TOKEN_LEFT_BRACE, "expect '{' before method body");
-    block();
+    consume(TOKEN_RIGHT_PAREN, "expected ')' after parameters");
+
+    if (match_token(TOKEN_ARROW)) {
+        // Single expression body, implicit return
+        expression();
+        emit_byte(OP_RETURN);
+    } else {
+        // Traditional block body
+        consume(TOKEN_LEFT_BRACE, "expected '{' before function body");
+        block();
+    }
 
     xen_obj_func* fn = end_compiler();
     emit_bytes(OP_CONSTANT, make_constant(OBJ_VAL(fn)));
