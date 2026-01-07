@@ -4,24 +4,31 @@
 #include "xobject.h"
 #include "xvalue.h"
 #include "xutils.h"
+#include "xtypeid.h"
 #include <ctype.h>
 #include <time.h>
 
-#define ENFORCE_NUM_ARGS(n)                                                                                            \
-    if (argc != n) {                                                                                                   \
-        xen_runtime_error("incorrect number of arguments provided: '%d' (requires %d)", argc, n);                      \
-        return NULL_VAL;                                                                                               \
-    }
+#define REQUIRE_ARG(name, slot, typeid)                                                                                \
+    do {                                                                                                               \
+        if (argc < slot + 1) {                                                                                         \
+            xen_runtime_error("argument '%s' (position %d) required for %s", name, slot, __func__);                    \
+            return NULL_VAL;                                                                                           \
+        }                                                                                                              \
+        if (typeid != xen_typeid_get(argv[slot]) && typeid != TYPEID_UNDEFINED) {                                      \
+            xen_runtime_error("expected typeid %d for argment '%s' (got %d"), typeid, name,                            \
+              xen_typeid_get(argv[slot]);                                                                              \
+            return NULL_VAL;                                                                                           \
+        }                                                                                                              \
+    } while (XEN_FALSE)
 
 static void define_native_fn(const char* name, xen_native_fn fn) {
     xen_obj_str* key = xen_obj_str_copy(name, strlen(name));
     xen_table_set(&g_vm.globals, key, OBJ_VAL(xen_obj_native_func_new(fn, name)));
 }
 
-static xen_value xen_builtin_typeof(i32 argc, xen_value* args) {
-    ENFORCE_NUM_ARGS(1);
-
-    xen_value val = args[0];
+static xen_value xen_builtin_typeof(i32 argc, xen_value* argv) {
+    REQUIRE_ARG("type", 0, TYPEID_UNDEFINED);
+    xen_value val = argv[0];
     const char* type_str;
 
     if (VAL_IS_BOOL(val)) {
@@ -71,12 +78,9 @@ static xen_value xen_builtin_typeof(i32 argc, xen_value* args) {
 }
 
 // type constructors
-static xen_value xen_builtin_number_ctor(i32 argc, xen_value* args) {
-    if (argc != 1) {
-        xen_runtime_error("number constructor requires an argument");
-        return NULL_VAL;
-    }
-    xen_value val = args[0];
+static xen_value xen_builtin_number_ctor(i32 argc, xen_value* argv) {
+    REQUIRE_ARG("construct_from", 0, TYPEID_UNDEFINED);
+    xen_value val = argv[0];
     switch (val.type) {
         case VAL_BOOL:
             return NUMBER_VAL(VAL_AS_BOOL(val));
@@ -100,12 +104,9 @@ static xen_value xen_builtin_number_ctor(i32 argc, xen_value* args) {
     return NULL_VAL;
 }
 
-static xen_value xen_builtin_string_ctor(i32 argc, xen_value* args) {
-    if (argc != 1) {
-        xen_runtime_error("number constructor requires an argument");
-        return NULL_VAL;
-    }
-    xen_value val = args[0];
+static xen_value xen_builtin_string_ctor(i32 argc, xen_value* argv) {
+    REQUIRE_ARG("construct_from", 0, TYPEID_UNDEFINED);
+    xen_value val = argv[0];
     switch (val.type) {
         case VAL_BOOL: {
             const char* bool_str = VAL_AS_BOOL(val) == XEN_TRUE ? "true" : "false";
@@ -130,12 +131,9 @@ static xen_value xen_builtin_string_ctor(i32 argc, xen_value* args) {
     return OBJ_VAL(xen_obj_str_copy(obj_str, strlen(obj_str)));
 }
 
-static xen_value xen_builtin_bool_ctor(i32 argc, xen_value* args) {
-    if (argc != 1) {
-        xen_runtime_error("number constructor requires an argument");
-        return NULL_VAL;
-    }
-    xen_value val = args[0];
+static xen_value xen_builtin_bool_ctor(i32 argc, xen_value* argv) {
+    REQUIRE_ARG("construct_from", 0, TYPEID_UNDEFINED);
+    xen_value val = argv[0];
     switch (val.type) {
         case VAL_BOOL: {
             return val;
@@ -157,20 +155,20 @@ static xen_value xen_builtin_bool_ctor(i32 argc, xen_value* args) {
 }
 
 // signature: (number of elements, default value (or null if missing))
-static xen_value xen_builtin_array_ctor(i32 argc, xen_value* args) {
+static xen_value xen_builtin_array_ctor(i32 argc, xen_value* argv) {
     if (argc > 2) {
         xen_runtime_error("array constructor has invalid number of arguments");
         return NULL_VAL;
     }
 
-    if (argc > 0 && args[0].type != VAL_NUMBER) {
+    if (argc > 0 && argv[0].type != VAL_NUMBER) {
         xen_runtime_error("element count must be a number");
         return NULL_VAL;
     }
 
-    i32 element_count       = (argc > 0) ? VAL_AS_NUMBER(args[0]) : 0;
+    i32 element_count       = (argc > 0 && VAL_IS_NUMBER(argv[0])) ? VAL_AS_NUMBER(argv[0]) : 0;
     bool has_default        = (argc == 2) ? XEN_TRUE : XEN_FALSE;
-    xen_value default_value = (has_default) ? args[1] : NULL_VAL;
+    xen_value default_value = (has_default) ? argv[1] : NULL_VAL;
 
     // create the array
     xen_obj_array* arr = xen_obj_array_new_with_capacity(element_count);
@@ -211,61 +209,53 @@ void xen_vm_register_namespace(const char* name, xen_value ns) {
 
 #include <math.h>
 
-static xen_value math_sqrt(i32 argc, xen_value* args) {
-    if (argc < 1 || !VAL_IS_NUMBER(args[0]))
-        return NULL_VAL;
-    return NUMBER_VAL(sqrt(VAL_AS_NUMBER(args[0])));
+static xen_value math_sqrt(i32 argc, xen_value* argv) {
+    REQUIRE_ARG("value", 0, TYPEID_NUMBER);
+    return NUMBER_VAL(sqrt(VAL_AS_NUMBER(argv[0])));
 }
 
-static xen_value math_sin(i32 argc, xen_value* args) {
-    if (argc < 1 || !VAL_IS_NUMBER(args[0]))
-        return NULL_VAL;
-    return NUMBER_VAL(sin(VAL_AS_NUMBER(args[0])));
+static xen_value math_sin(i32 argc, xen_value* argv) {
+    REQUIRE_ARG("value", 0, TYPEID_NUMBER);
+    return NUMBER_VAL(sin(VAL_AS_NUMBER(argv[0])));
 }
 
-static xen_value math_cos(i32 argc, xen_value* args) {
-    if (argc < 1 || !VAL_IS_NUMBER(args[0]))
-        return NULL_VAL;
-    return NUMBER_VAL(cos(VAL_AS_NUMBER(args[0])));
+static xen_value math_cos(i32 argc, xen_value* argv) {
+    REQUIRE_ARG("value", 0, TYPEID_NUMBER);
+    return NUMBER_VAL(cos(VAL_AS_NUMBER(argv[0])));
 }
 
-static xen_value math_tan(i32 argc, xen_value* args) {
-    if (argc < 1 || !VAL_IS_NUMBER(args[0]))
-        return NULL_VAL;
-    return NUMBER_VAL(tan(VAL_AS_NUMBER(args[0])));
+static xen_value math_tan(i32 argc, xen_value* argv) {
+    REQUIRE_ARG("value", 0, TYPEID_NUMBER);
+    return NUMBER_VAL(tan(VAL_AS_NUMBER(argv[0])));
 }
 
-static xen_value math_pow(i32 argc, xen_value* args) {
-    if (argc < 2 || !VAL_IS_NUMBER(args[0]) || !VAL_IS_NUMBER(args[1]))
-        return NULL_VAL;
-    return NUMBER_VAL(pow(VAL_AS_NUMBER(args[0]), VAL_AS_NUMBER(args[1])));
+static xen_value math_pow(i32 argc, xen_value* argv) {
+    REQUIRE_ARG("base", 0, TYPEID_NUMBER);
+    REQUIRE_ARG("exponent", 1, TYPEID_NUMBER);
+    return NUMBER_VAL(pow(VAL_AS_NUMBER(argv[0]), VAL_AS_NUMBER(argv[1])));
 }
 
-static xen_value math_log(i32 argc, xen_value* args) {
-    if (argc < 1 || !VAL_IS_NUMBER(args[0]))
-        return NULL_VAL;
-    return NUMBER_VAL(log(VAL_AS_NUMBER(args[0])));
+static xen_value math_log(i32 argc, xen_value* argv) {
+    REQUIRE_ARG("value", 0, TYPEID_NUMBER);
+    return NUMBER_VAL(log(VAL_AS_NUMBER(argv[0])));
 }
 
-static xen_value math_log10(i32 argc, xen_value* args) {
-    if (argc < 1 || !VAL_IS_NUMBER(args[0]))
-        return NULL_VAL;
-    return NUMBER_VAL(log10(VAL_AS_NUMBER(args[0])));
+static xen_value math_log10(i32 argc, xen_value* argv) {
+    REQUIRE_ARG("value", 0, TYPEID_NUMBER);
+    return NUMBER_VAL(log10(VAL_AS_NUMBER(argv[0])));
 }
 
-static xen_value math_exp(i32 argc, xen_value* args) {
-    if (argc < 1 || !VAL_IS_NUMBER(args[0]))
-        return NULL_VAL;
-    return NUMBER_VAL(exp(VAL_AS_NUMBER(args[0])));
+static xen_value math_exp(i32 argc, xen_value* argv) {
+    REQUIRE_ARG("value", 0, TYPEID_NUMBER);
+    return NUMBER_VAL(exp(VAL_AS_NUMBER(argv[0])));
 }
 
-static xen_value math_min(i32 argc, xen_value* args) {
-    if (argc < 1)
-        return NULL_VAL;
-    f64 min = VAL_AS_NUMBER(args[0]);
+static xen_value math_min(i32 argc, xen_value* argv) {
+    REQUIRE_ARG("value", 0, TYPEID_NUMBER);
+    f64 min = VAL_AS_NUMBER(argv[0]);
     for (i32 i = 1; i < argc; i++) {
-        if (VAL_IS_NUMBER(args[i])) {
-            f64 val = VAL_AS_NUMBER(args[i]);
+        if (VAL_IS_NUMBER(argv[i])) {
+            f64 val = VAL_AS_NUMBER(argv[i]);
             if (val < min)
                 min = val;
         }
@@ -273,13 +263,12 @@ static xen_value math_min(i32 argc, xen_value* args) {
     return NUMBER_VAL(min);
 }
 
-static xen_value math_max(i32 argc, xen_value* args) {
-    if (argc < 1)
-        return NULL_VAL;
-    f64 max = VAL_AS_NUMBER(args[0]);
+static xen_value math_max(i32 argc, xen_value* argv) {
+    REQUIRE_ARG("value", 0, TYPEID_NUMBER);
+    f64 max = VAL_AS_NUMBER(argv[0]);
     for (i32 i = 1; i < argc; i++) {
-        if (VAL_IS_NUMBER(args[i])) {
-            f64 val = VAL_AS_NUMBER(args[i]);
+        if (VAL_IS_NUMBER(argv[i])) {
+            f64 val = VAL_AS_NUMBER(argv[i]);
             if (val > max)
                 max = val;
         }
@@ -287,9 +276,9 @@ static xen_value math_max(i32 argc, xen_value* args) {
     return NUMBER_VAL(max);
 }
 
-static xen_value math_random(i32 argc, xen_value* args) {
+static xen_value math_random(i32 argc, xen_value* argv) {
     XEN_UNUSED(argc);
-    XEN_UNUSED(args);
+    XEN_UNUSED(argv);
     return NUMBER_VAL((f64)rand() / (f64)RAND_MAX);
 }
 
@@ -320,25 +309,27 @@ xen_obj_namespace* xen_builtin_math() {
 // IO namespace
 // ============================================================================
 
-static xen_value io_println(i32 argc, xen_value* args) {
+static xen_value io_println(i32 argc, xen_value* argv) {
+    REQUIRE_ARG("msg", 0, TYPEID_UNDEFINED);
     for (i32 i = 0; i < argc; i++) {
-        xen_value_print(args[i]);
+        xen_value_print(argv[i]);
     }
     printf("\n");
     return NULL_VAL;
 }
 
-static xen_value io_print(i32 argc, xen_value* args) {
+static xen_value io_print(i32 argc, xen_value* argv) {
+    REQUIRE_ARG("msg", 0, TYPEID_UNDEFINED);
     for (i32 i = 0; i < argc; i++) {
-        xen_value_print(args[i]);
+        xen_value_print(argv[i]);
     }
     return NULL_VAL;
 }
 
-static xen_value io_input(i32 argc, xen_value* args) {
-    bool has_prefix = (argc > 0 && args[0].type == VAL_OBJECT && OBJ_IS_STRING(args[0]));
+static xen_value io_input(i32 argc, xen_value* argv) {
+    bool has_prefix = (argc > 0 && argv[0].type == VAL_OBJECT && OBJ_IS_STRING(argv[0]));
     if (has_prefix)
-        printf("%s", OBJ_AS_CSTRING(args[0]));
+        printf("%s", OBJ_AS_CSTRING(argv[0]));
 
     char buffer[1024];
     if (fgets(buffer, sizeof(buffer), stdin)) {
@@ -352,16 +343,16 @@ static xen_value io_input(i32 argc, xen_value* args) {
     return NULL_VAL;
 }
 
-static xen_value io_clear(i32 argc, xen_value* args) {
+static xen_value io_clear(i32 argc, xen_value* argv) {
     XEN_UNUSED(argc);
-    XEN_UNUSED(args);
+    XEN_UNUSED(argv);
     printf("\033[2J\033[H");  // should be at least somewhat cross-platform
     return BOOL_VAL(XEN_TRUE);
 }
 
-static xen_value io_pause(i32 argc, xen_value* args) {
+static xen_value io_pause(i32 argc, xen_value* argv) {
     XEN_UNUSED(argc);
-    XEN_UNUSED(args);
+    XEN_UNUSED(argv);
     int c;
     while ((c = getchar()) != '\n' && c != EOF)
         ;
@@ -382,13 +373,24 @@ xen_obj_namespace* xen_builtin_io() {
 // OS namespace
 // ============================================================================
 
-static xen_value os_readtxt(i32 argc, xen_value* args) {
-    if (argc != 1) {
-        xen_runtime_error("io_readtxt() takes one argument (filename)");
-        return NULL_VAL;
-    }
+#include <sys/stat.h>
+#include <errno.h>
+#ifdef _WIN32
+    #include <direct.h>
+    #include <io.h>
+    #include <windows.h>
+    #define mkdir(path, mode) _mkdir(path)
+    #define rmdir(path) _rmdir(path)
+    #define unlink(path) _unlink(path)
+#else
+    #include <sys/types.h>
+    #include <dirent.h>
+    #include <unistd.h>
+#endif
 
-    xen_value val = args[0];
+static xen_value os_readtxt(i32 argc, xen_value* argv) {
+    REQUIRE_ARG("filename", 0, TYPEID_STRING);
+    xen_value val = argv[0];
 
     if (val.type == VAL_OBJECT && OBJ_IS_STRING(val)) {
         FILE* fp = fopen(OBJ_AS_CSTRING(val), "r");
@@ -415,13 +417,9 @@ static xen_value os_readtxt(i32 argc, xen_value* args) {
     }
 }
 
-static xen_value os_readlines(i32 argc, xen_value* args) {
-    if (argc != 1) {
-        xen_runtime_error("io_readlines() takes one argument (filename)");
-        return NULL_VAL;
-    }
-
-    xen_value val = args[0];
+static xen_value os_readlines(i32 argc, xen_value* argv) {
+    REQUIRE_ARG("filename", 0, TYPEID_STRING);
+    xen_value val = argv[0];
 
     if (val.type == VAL_OBJECT && OBJ_IS_STRING(val)) {
         FILE* fp = fopen(OBJ_AS_CSTRING(val), "r");
@@ -447,10 +445,10 @@ static xen_value os_readlines(i32 argc, xen_value* args) {
     }
 }
 
-static xen_value os_exit(i32 argc, xen_value* args) {
+static xen_value os_exit(i32 argc, xen_value* argv) {
     i32 exit_code = 0;
-    if (argc > 0 && VAL_IS_NUMBER(args[0]))
-        exit_code = (i32)VAL_AS_NUMBER(args[0]);
+    if (argc > 0 && VAL_IS_NUMBER(argv[0]))
+        exit_code = (i32)VAL_AS_NUMBER(argv[0]);
 
     printf("Xen was terminated with exit code %d\n", exit_code);
     exit(exit_code);
@@ -458,24 +456,16 @@ static xen_value os_exit(i32 argc, xen_value* args) {
     return NULL_VAL;
 }
 
-// Signature: os.exec( cmd, args[] ) => exit_code
+// Signature:
+// os.exec( cmd, argv[] ) -> exit_code
 // TODO: This uses system and is quite unsafe, need to refactor to use fork instead
-static xen_value os_exec(i32 argc, xen_value* args) {
-    if (argc < 1) {
-        xen_runtime_error("os.exec() requires at least one argument");
-        return NULL_VAL;
-    }
-
-    if (!OBJ_IS_STRING(args[0])) {
-        xen_runtime_error("first argument must be a string");
-        return NULL_VAL;
-    }
-
-    xen_obj_str* cmd = OBJ_AS_STRING(args[0]);
+static xen_value os_exec(i32 argc, xen_value* argv) {
+    REQUIRE_ARG("cmd", 0, TYPEID_STRING);
+    xen_obj_str* cmd = OBJ_AS_STRING(argv[0]);
 
     i32 args_count = 0;
-    if (argc == 2 && OBJ_IS_ARRAY(args[1])) {
-        args_count = OBJ_AS_ARRAY(args[1])->array.count;
+    if (argc == 2 && OBJ_IS_ARRAY(argv[1])) {
+        args_count = OBJ_AS_ARRAY(argv[1])->array.count;
     }
 
     char cmd_buffer[XEN_STRBUF_SIZE] = {'\0'};
@@ -485,7 +475,7 @@ static xen_value os_exec(i32 argc, xen_value* args) {
     offset += cmd->length + 1;
 
     if (args_count > 0) {
-        xen_obj_array* args_arr = OBJ_AS_ARRAY(args[1]);
+        xen_obj_array* args_arr = OBJ_AS_ARRAY(argv[1]);
         for (i32 i = 0; i < args_count; i++) {
             xen_value arg = args_arr->array.values[i];
             if (OBJ_IS_STRING(arg)) {
@@ -501,12 +491,199 @@ static xen_value os_exec(i32 argc, xen_value* args) {
     return NUMBER_VAL(exit_code);
 }
 
+static i32 remove_directory(const char* path, bool recursive) {
+    if (!recursive) {
+        return rmdir(path);
+    }
+
+    // Recursive removal
+#ifdef _WIN32
+    WIN32_FIND_DATA find_data;
+    HANDLE hFind;
+    char search_path[MAX_PATH];
+    char file_path[MAX_PATH];
+
+    snprintf(search_path, MAX_PATH, "%s\\*", path);
+    hFind = FindFirstFile(search_path, &find_data);
+
+    if (hFind == INVALID_HANDLE_VALUE) {
+        return rmdir(path);
+    }
+
+    do {
+        if (strcmp(find_data.cFileName, ".") != 0 && strcmp(find_data.cFileName, "..") != 0) {
+            snprintf(file_path, MAX_PATH, "%s\\%s", path, find_data.cFileName);
+
+            if (find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+                remove_directory(file_path, true);  // Recursively remove subdirectories
+            } else {
+                unlink(file_path);
+            }
+        }
+    } while (FindNextFile(hFind, &find_data));
+
+    FindClose(hFind);
+    return rmdir(path);
+#else
+    DIR* dir;
+    struct dirent* entry;
+    char file_path[1024];
+    struct stat statbuf;
+
+    dir = opendir(path);
+    if (!dir) {
+        return -1;
+    }
+
+    while ((entry = readdir(dir)) != NULL) {
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
+            continue;
+        }
+
+        snprintf(file_path, sizeof(file_path), "%s/%s", path, entry->d_name);
+
+        if (stat(file_path, &statbuf) == -1) {
+            continue;
+        }
+
+        if (S_ISDIR(statbuf.st_mode)) {
+            remove_directory(file_path, XEN_TRUE);  // Recursively remove subdirectories
+        } else {
+            unlink(file_path);
+        }
+    }
+
+    closedir(dir);
+    return rmdir(path);
+#endif
+}
+
+static bool path_exists(const char* path) {
+    struct stat st;
+    return stat(path, &st) == 0;
+}
+
+static bool is_directory(const char* path) {
+    struct stat st;
+    if (stat(path, &st) != 0) {
+        return XEN_FALSE;
+    }
+    return S_ISDIR(st.st_mode);
+}
+
+static bool is_file(const char* path) {
+    struct stat st;
+    if (stat(path, &st) != 0) {
+        return XEN_FALSE;
+    }
+    return S_ISREG(st.st_mode);
+}
+
+// Signature:
+// * dir: string
+// * should_overwrite: bool
+// fn mkdir(dir, should_overwrite) -> success: true, fail: false
+static xen_value os_mkdir(int argc, xen_value* argv) {
+    REQUIRE_ARG("dir", 0, TYPEID_STRING);
+    const char* dir = OBJ_AS_CSTRING(argv[0]);
+
+    bool should_overwrite = XEN_FALSE;
+    if (argc > 1 && xen_typeid_get(argv[1]) == TYPEID_BOOL) {
+        should_overwrite = VAL_AS_BOOL(argv[1]);
+    }
+
+    struct stat st;
+    if (stat(dir, &st) == 0) {
+        if (S_ISDIR(st.st_mode)) {
+            if (should_overwrite) {
+                if (remove_directory(dir, XEN_TRUE) != 0) {
+                    xen_runtime_error("failed to remove directory '%s'", dir);
+                    return BOOL_VAL(XEN_FALSE);
+                }
+            } else {
+                return BOOL_VAL(XEN_FALSE);  // directory exists but no overwrite
+            }
+        }
+    }
+
+#ifdef _WIN32
+    int result = mkdir(path);
+#else
+    int result = mkdir(dir, 0755);
+#endif
+
+    if (result == 0) {
+        return BOOL_VAL(XEN_TRUE);
+    } else {
+        return BOOL_VAL(XEN_FALSE);
+    }
+}
+
+// Signature:
+// * dir: string
+// * recursive: bool
+// fn rmdir(dir, recursive) -> success: true, fail: false
+static xen_value os_rmdir(int argc, xen_value* argv) {
+    REQUIRE_ARG("dir", 0, TYPEID_STRING);
+    const char* dir = OBJ_AS_CSTRING(argv[0]);
+
+    bool recursive = XEN_FALSE;
+    if (argc > 1 && xen_typeid_get(argv[1]) == TYPEID_BOOL) {
+        recursive = VAL_AS_BOOL(argv[1]);
+    }
+
+    i32 result = remove_directory(dir, recursive);
+    if (result != 0) {
+        xen_runtime_error("failed to remove directory '%s' (not empty)", dir);
+        return BOOL_VAL(XEN_FALSE);
+    }
+
+    return BOOL_VAL(XEN_TRUE);
+}
+
+// Signature:
+// * filename: string
+// fn rm(filename) -> success: true, fail: false
+static xen_value os_rm(i32 argc, xen_value* argv) {
+    REQUIRE_ARG("filename", 0, TYPEID_STRING);
+    const char* filename = OBJ_AS_CSTRING(argv[0]);
+
+    if (!path_exists(filename)) {
+        xen_runtime_error("file does not exist: %s", filename);
+        return BOOL_VAL(XEN_FALSE);
+    }
+
+    if (!is_file(filename)) {
+        xen_runtime_error("path is not a file: %s", filename);
+        return BOOL_VAL(XEN_FALSE);
+    }
+
+    if (unlink(filename) == 0) {
+        return BOOL_VAL(XEN_TRUE);
+    } else {
+        xen_runtime_error("failed to delete file: %s", filename);
+        return BOOL_VAL(XEN_FALSE);
+    }
+}
+
+// Signature:
+// * path: string (file or directory)
+// fn exists(dir, recursive) -> bool
+static xen_value os_exists(i32 argc, xen_value* argv) {
+    REQUIRE_ARG("path", 0, TYPEID_STRING);
+    return BOOL_VAL(path_exists(OBJ_AS_CSTRING(argv[0])));
+}
+
 xen_obj_namespace* xen_builtin_os() {
     xen_obj_namespace* os = xen_obj_namespace_new("os");
     xen_obj_namespace_set(os, "readtxt", OBJ_VAL(xen_obj_native_func_new(os_readtxt, "readtxt")));
     xen_obj_namespace_set(os, "readlines", OBJ_VAL(xen_obj_native_func_new(os_readlines, "readlines")));
     xen_obj_namespace_set(os, "exit", OBJ_VAL(xen_obj_native_func_new(os_exit, "exit")));
     xen_obj_namespace_set(os, "exec", OBJ_VAL(xen_obj_native_func_new(os_exec, "exec")));
+    xen_obj_namespace_set(os, "mkdir", OBJ_VAL(xen_obj_native_func_new(os_mkdir, "mkdir")));
+    xen_obj_namespace_set(os, "rmdir", OBJ_VAL(xen_obj_native_func_new(os_rmdir, "rmdir")));
+    xen_obj_namespace_set(os, "rm", OBJ_VAL(xen_obj_native_func_new(os_rm, "rm")));
+    xen_obj_namespace_set(os, "exists", OBJ_VAL(xen_obj_native_func_new(os_exists, "exists")));
     return os;
 }
 
@@ -514,16 +691,16 @@ xen_obj_namespace* xen_builtin_os() {
 // String methods (exposed for type methods)
 // ============================================================================
 
-xen_value xen_str_len(i32 argc, xen_value* args) {
-    if (argc < 1 || !OBJ_IS_STRING(args[0]))
+xen_value xen_str_len(i32 argc, xen_value* argv) {
+    if (argc < 1 || !OBJ_IS_STRING(argv[0]))
         return NULL_VAL;
-    return NUMBER_VAL(OBJ_AS_STRING(args[0])->length);
+    return NUMBER_VAL(OBJ_AS_STRING(argv[0])->length);
 }
 
-xen_value xen_str_upper(i32 argc, xen_value* args) {
-    if (argc < 1 || !OBJ_IS_STRING(args[0]))
+xen_value xen_str_upper(i32 argc, xen_value* argv) {
+    if (argc < 1 || !OBJ_IS_STRING(argv[0]))
         return NULL_VAL;
-    xen_obj_str* str = OBJ_AS_STRING(args[0]);
+    xen_obj_str* str = OBJ_AS_STRING(argv[0]);
     char* buffer     = malloc(str->length + 1);
     for (i32 i = 0; i < str->length; i++) {
         buffer[i] = toupper(str->str[i]);
@@ -532,10 +709,10 @@ xen_value xen_str_upper(i32 argc, xen_value* args) {
     return OBJ_VAL(xen_obj_str_take(buffer, str->length));
 }
 
-xen_value xen_str_lower(i32 argc, xen_value* args) {
-    if (argc < 1 || !OBJ_IS_STRING(args[0]))
+xen_value xen_str_lower(i32 argc, xen_value* argv) {
+    if (argc < 1 || !OBJ_IS_STRING(argv[0]))
         return NULL_VAL;
-    xen_obj_str* str = OBJ_AS_STRING(args[0]);
+    xen_obj_str* str = OBJ_AS_STRING(argv[0]);
     char* buffer     = malloc(str->length + 1);
     for (i32 i = 0; i < str->length; i++) {
         buffer[i] = tolower(str->str[i]);
@@ -544,10 +721,10 @@ xen_value xen_str_lower(i32 argc, xen_value* args) {
     return OBJ_VAL(xen_obj_str_take(buffer, str->length));
 }
 
-xen_value xen_str_trim(i32 argc, xen_value* args) {
-    if (argc < 1 || !OBJ_IS_STRING(args[0]))
+xen_value xen_str_trim(i32 argc, xen_value* argv) {
+    if (argc < 1 || !OBJ_IS_STRING(argv[0]))
         return NULL_VAL;
-    xen_obj_str* str = OBJ_AS_STRING(args[0]);
+    xen_obj_str* str = OBJ_AS_STRING(argv[0]);
 
     const char* start = str->str;
     const char* end   = str->str + str->length - 1;
@@ -561,42 +738,42 @@ xen_value xen_str_trim(i32 argc, xen_value* args) {
     return OBJ_VAL(xen_obj_str_copy(start, new_len));
 }
 
-xen_value xen_str_contains(i32 argc, xen_value* args) {
-    if (argc < 2 || !OBJ_IS_STRING(args[0]) || !OBJ_IS_STRING(args[1]))
+xen_value xen_str_contains(i32 argc, xen_value* argv) {
+    if (argc < 2 || !OBJ_IS_STRING(argv[0]) || !OBJ_IS_STRING(argv[1]))
         return BOOL_VAL(XEN_FALSE);
-    xen_obj_str* haystack = OBJ_AS_STRING(args[0]);
-    xen_obj_str* needle   = OBJ_AS_STRING(args[1]);
+    xen_obj_str* haystack = OBJ_AS_STRING(argv[0]);
+    xen_obj_str* needle   = OBJ_AS_STRING(argv[1]);
     return BOOL_VAL(strstr(haystack->str, needle->str) != NULL);
 }
 
-xen_value xen_str_starts_with(i32 argc, xen_value* args) {
-    if (argc < 2 || !OBJ_IS_STRING(args[0]) || !OBJ_IS_STRING(args[1]))
+xen_value xen_str_starts_with(i32 argc, xen_value* argv) {
+    if (argc < 2 || !OBJ_IS_STRING(argv[0]) || !OBJ_IS_STRING(argv[1]))
         return BOOL_VAL(XEN_FALSE);
-    xen_obj_str* str    = OBJ_AS_STRING(args[0]);
-    xen_obj_str* prefix = OBJ_AS_STRING(args[1]);
+    xen_obj_str* str    = OBJ_AS_STRING(argv[0]);
+    xen_obj_str* prefix = OBJ_AS_STRING(argv[1]);
     if (prefix->length > str->length)
         return BOOL_VAL(XEN_FALSE);
     return BOOL_VAL(memcmp(str->str, prefix->str, prefix->length) == 0);
 }
 
-xen_value xen_str_ends_with(i32 argc, xen_value* args) {
-    if (argc < 2 || !OBJ_IS_STRING(args[0]) || !OBJ_IS_STRING(args[1]))
+xen_value xen_str_ends_with(i32 argc, xen_value* argv) {
+    if (argc < 2 || !OBJ_IS_STRING(argv[0]) || !OBJ_IS_STRING(argv[1]))
         return BOOL_VAL(XEN_FALSE);
-    xen_obj_str* str    = OBJ_AS_STRING(args[0]);
-    xen_obj_str* suffix = OBJ_AS_STRING(args[1]);
+    xen_obj_str* str    = OBJ_AS_STRING(argv[0]);
+    xen_obj_str* suffix = OBJ_AS_STRING(argv[1]);
     if (suffix->length > str->length)
         return BOOL_VAL(XEN_FALSE);
     const char* start = str->str + str->length - suffix->length;
     return BOOL_VAL(memcmp(start, suffix->str, suffix->length) == 0);
 }
 
-xen_value xen_str_substr(i32 argc, xen_value* args) {
-    if (argc < 2 || !OBJ_IS_STRING(args[0]) || !VAL_IS_NUMBER(args[1]))
+xen_value xen_str_substr(i32 argc, xen_value* argv) {
+    if (argc < 2 || !OBJ_IS_STRING(argv[0]) || !VAL_IS_NUMBER(argv[1]))
         return NULL_VAL;
 
-    xen_obj_str* str = OBJ_AS_STRING(args[0]);
-    i32 start        = (i32)VAL_AS_NUMBER(args[1]);
-    i32 len          = (argc >= 3 && VAL_IS_NUMBER(args[2])) ? (i32)VAL_AS_NUMBER(args[2]) : str->length - start;
+    xen_obj_str* str = OBJ_AS_STRING(argv[0]);
+    i32 start        = (i32)VAL_AS_NUMBER(argv[1]);
+    i32 len          = (argc >= 3 && VAL_IS_NUMBER(argv[2])) ? (i32)VAL_AS_NUMBER(argv[2]) : str->length - start;
 
     if (start < 0)
         start = 0;
@@ -608,12 +785,12 @@ xen_value xen_str_substr(i32 argc, xen_value* args) {
     return OBJ_VAL(xen_obj_str_copy(str->str + start, len));
 }
 
-xen_value xen_str_find(i32 argc, xen_value* args) {
-    if (argc < 2 || !OBJ_IS_STRING(args[0]) || !OBJ_IS_STRING(args[1]))
+xen_value xen_str_find(i32 argc, xen_value* argv) {
+    if (argc < 2 || !OBJ_IS_STRING(argv[0]) || !OBJ_IS_STRING(argv[1]))
         return NUMBER_VAL(-1);
 
-    xen_obj_str* haystack = OBJ_AS_STRING(args[0]);
-    xen_obj_str* needle   = OBJ_AS_STRING(args[1]);
+    xen_obj_str* haystack = OBJ_AS_STRING(argv[0]);
+    xen_obj_str* needle   = OBJ_AS_STRING(argv[1]);
 
     char* found = strstr(haystack->str, needle->str);
     if (found) {
@@ -622,12 +799,12 @@ xen_value xen_str_find(i32 argc, xen_value* args) {
     return NUMBER_VAL(-1);
 }
 
-xen_value xen_str_split(i32 argc, xen_value* args) {
-    if (argc < 2 || !OBJ_IS_STRING(args[0]) || !OBJ_IS_STRING(args[1]))
+xen_value xen_str_split(i32 argc, xen_value* argv) {
+    if (argc < 2 || !OBJ_IS_STRING(argv[0]) || !OBJ_IS_STRING(argv[1]))
         return NULL_VAL;
 
-    xen_obj_str* str   = OBJ_AS_STRING(args[0]);
-    xen_obj_str* delim = OBJ_AS_STRING(args[1]);
+    xen_obj_str* str   = OBJ_AS_STRING(argv[0]);
+    xen_obj_str* delim = OBJ_AS_STRING(argv[1]);
 
     xen_obj_array* result = xen_obj_array_new();
 
@@ -655,16 +832,16 @@ xen_value xen_str_split(i32 argc, xen_value* args) {
     return OBJ_VAL(result);
 }
 
-xen_value xen_str_replace(i32 argc, xen_value* args) {
-    if (argc < 3 || !OBJ_IS_STRING(args[0]) || !OBJ_IS_STRING(args[1]) || !OBJ_IS_STRING(args[2]))
-        return args[0];
+xen_value xen_str_replace(i32 argc, xen_value* argv) {
+    if (argc < 3 || !OBJ_IS_STRING(argv[0]) || !OBJ_IS_STRING(argv[1]) || !OBJ_IS_STRING(argv[2]))
+        return argv[0];
 
-    xen_obj_str* str     = OBJ_AS_STRING(args[0]);
-    xen_obj_str* find    = OBJ_AS_STRING(args[1]);
-    xen_obj_str* replace = OBJ_AS_STRING(args[2]);
+    xen_obj_str* str     = OBJ_AS_STRING(argv[0]);
+    xen_obj_str* find    = OBJ_AS_STRING(argv[1]);
+    xen_obj_str* replace = OBJ_AS_STRING(argv[2]);
 
     if (find->length == 0)
-        return args[0];
+        return argv[0];
 
     i32 count       = 0;
     const char* pos = str->str;
@@ -674,7 +851,7 @@ xen_value xen_str_replace(i32 argc, xen_value* args) {
     }
 
     if (count == 0)
-        return args[0];
+        return argv[0];
 
     i32 new_len  = str->length + count * (replace->length - find->length);
     char* buffer = malloc(new_len + 1);
@@ -715,15 +892,15 @@ xen_obj_namespace* xen_builtin_string() {
 // Time namespace
 // ============================================================================
 
-static xen_value time_now(i32 argc, xen_value* args) {
+static xen_value time_now(i32 argc, xen_value* argv) {
     XEN_UNUSED(argc);
-    XEN_UNUSED(args);
+    XEN_UNUSED(argv);
     return NUMBER_VAL((f64)time(NULL));
 }
 
-static xen_value time_clock(i32 argc, xen_value* args) {
+static xen_value time_clock(i32 argc, xen_value* argv) {
     XEN_UNUSED(argc);
-    XEN_UNUSED(args);
+    XEN_UNUSED(argv);
     return NUMBER_VAL((f64)clock() / CLOCKS_PER_SEC);
 }
 
@@ -738,58 +915,58 @@ xen_obj_namespace* xen_builtin_datetime() {
 // Array methods (exposed for type methods)
 // ============================================================================
 
-xen_value xen_arr_len(i32 argc, xen_value* args) {
-    if (argc < 1 || !OBJ_IS_ARRAY(args[0]))
+xen_value xen_arr_len(i32 argc, xen_value* argv) {
+    if (argc < 1 || !OBJ_IS_ARRAY(argv[0]))
         return NUMBER_VAL(-1);
-    return NUMBER_VAL(OBJ_AS_ARRAY(args[0])->array.count);
+    return NUMBER_VAL(OBJ_AS_ARRAY(argv[0])->array.count);
 }
 
-xen_value xen_arr_push(i32 argc, xen_value* args) {
-    if (argc < 2 || !OBJ_IS_ARRAY(args[0]))
+xen_value xen_arr_push(i32 argc, xen_value* argv) {
+    if (argc < 2 || !OBJ_IS_ARRAY(argv[0]))
         return NULL_VAL;
-    xen_obj_array* arr = OBJ_AS_ARRAY(args[0]);
+    xen_obj_array* arr = OBJ_AS_ARRAY(argv[0]);
     for (i32 i = 1; i < argc; i++) {
-        xen_obj_array_push(arr, args[i]);
+        xen_obj_array_push(arr, argv[i]);
     }
     return NUMBER_VAL(arr->array.count);
 }
 
-xen_value xen_arr_pop(i32 argc, xen_value* args) {
-    if (argc < 1 || !OBJ_IS_ARRAY(args[0]))
+xen_value xen_arr_pop(i32 argc, xen_value* argv) {
+    if (argc < 1 || !OBJ_IS_ARRAY(argv[0]))
         return NULL_VAL;
-    return xen_obj_array_pop(OBJ_AS_ARRAY(args[0]));
+    return xen_obj_array_pop(OBJ_AS_ARRAY(argv[0]));
 }
 
-xen_value xen_arr_first(i32 argc, xen_value* args) {
-    if (argc < 1 || !OBJ_IS_ARRAY(args[0]))
+xen_value xen_arr_first(i32 argc, xen_value* argv) {
+    if (argc < 1 || !OBJ_IS_ARRAY(argv[0]))
         return NULL_VAL;
-    xen_obj_array* arr = OBJ_AS_ARRAY(args[0]);
+    xen_obj_array* arr = OBJ_AS_ARRAY(argv[0]);
     if (arr->array.count == 0)
         return NULL_VAL;
     return arr->array.values[0];
 }
 
-xen_value xen_arr_last(i32 argc, xen_value* args) {
-    if (argc < 1 || !OBJ_IS_ARRAY(args[0]))
+xen_value xen_arr_last(i32 argc, xen_value* argv) {
+    if (argc < 1 || !OBJ_IS_ARRAY(argv[0]))
         return NULL_VAL;
-    xen_obj_array* arr = OBJ_AS_ARRAY(args[0]);
+    xen_obj_array* arr = OBJ_AS_ARRAY(argv[0]);
     if (arr->array.count == 0)
         return NULL_VAL;
     return arr->array.values[arr->array.count - 1];
 }
 
-xen_value xen_arr_clear(i32 argc, xen_value* args) {
-    if (argc < 1 || !OBJ_IS_ARRAY(args[0]))
+xen_value xen_arr_clear(i32 argc, xen_value* argv) {
+    if (argc < 1 || !OBJ_IS_ARRAY(argv[0]))
         return NULL_VAL;
-    OBJ_AS_ARRAY(args[0])->array.count = 0;
+    OBJ_AS_ARRAY(argv[0])->array.count = 0;
     return NULL_VAL;
 }
 
-xen_value xen_arr_contains(i32 argc, xen_value* args) {
-    if (argc < 2 || !OBJ_IS_ARRAY(args[0]))
+xen_value xen_arr_contains(i32 argc, xen_value* argv) {
+    if (argc < 2 || !OBJ_IS_ARRAY(argv[0]))
         return BOOL_VAL(XEN_FALSE);
-    xen_obj_array* arr = OBJ_AS_ARRAY(args[0]);
-    xen_value needle   = args[1];
+    xen_obj_array* arr = OBJ_AS_ARRAY(argv[0]);
+    xen_value needle   = argv[1];
     for (i32 i = 0; i < arr->array.count; i++) {
         if (xen_value_equal(arr->array.values[i], needle)) {
             return BOOL_VAL(XEN_TRUE);
@@ -798,11 +975,11 @@ xen_value xen_arr_contains(i32 argc, xen_value* args) {
     return BOOL_VAL(XEN_FALSE);
 }
 
-xen_value xen_arr_index_of(i32 argc, xen_value* args) {
-    if (argc < 2 || !OBJ_IS_ARRAY(args[0]))
+xen_value xen_arr_index_of(i32 argc, xen_value* argv) {
+    if (argc < 2 || !OBJ_IS_ARRAY(argv[0]))
         return NUMBER_VAL(-1);
-    xen_obj_array* arr = OBJ_AS_ARRAY(args[0]);
-    xen_value needle   = args[1];
+    xen_obj_array* arr = OBJ_AS_ARRAY(argv[0]);
+    xen_value needle   = argv[1];
     for (i32 i = 0; i < arr->array.count; i++) {
         if (xen_value_equal(arr->array.values[i], needle)) {
             return NUMBER_VAL(i);
@@ -811,28 +988,28 @@ xen_value xen_arr_index_of(i32 argc, xen_value* args) {
     return NUMBER_VAL(-1);
 }
 
-xen_value xen_arr_reverse(i32 argc, xen_value* args) {
-    if (argc < 1 || !OBJ_IS_ARRAY(args[0]))
+xen_value xen_arr_reverse(i32 argc, xen_value* argv) {
+    if (argc < 1 || !OBJ_IS_ARRAY(argv[0]))
         return NULL_VAL;
-    xen_obj_array* arr = OBJ_AS_ARRAY(args[0]);
+    xen_obj_array* arr = OBJ_AS_ARRAY(argv[0]);
     for (i32 i = 0; i < arr->array.count / 2; i++) {
         i32 j                = arr->array.count - 1 - i;
         xen_value temp       = arr->array.values[i];
         arr->array.values[i] = arr->array.values[j];
         arr->array.values[j] = temp;
     }
-    return args[0];
+    return argv[0];
 }
 
-xen_value xen_arr_join(i32 argc, xen_value* args) {
-    if (argc < 1 || !OBJ_IS_ARRAY(args[0]))
+xen_value xen_arr_join(i32 argc, xen_value* argv) {
+    if (argc < 1 || !OBJ_IS_ARRAY(argv[0]))
         return NULL_VAL;
 
-    xen_obj_array* arr = OBJ_AS_ARRAY(args[0]);
+    xen_obj_array* arr = OBJ_AS_ARRAY(argv[0]);
     char* delim        = ", ";
 
-    if (argc > 1 && VAL_IS_OBJ(args[1]) && OBJ_IS_STRING(args[1])) {
-        delim = OBJ_AS_CSTRING(args[1]);
+    if (argc > 1 && VAL_IS_OBJ(argv[1]) && OBJ_IS_STRING(argv[1])) {
+        delim = OBJ_AS_CSTRING(argv[1]);
     }
 
     const i32 size                     = arr->array.count;
@@ -886,35 +1063,35 @@ xen_obj_namespace* xen_builtin_array() {
 // Number methods (exposed for type methods)
 // ============================================================================
 
-xen_value xen_num_abs(i32 argc, xen_value* args) {
-    if (argc < 1 || !VAL_IS_NUMBER(args[0]))
+xen_value xen_num_abs(i32 argc, xen_value* argv) {
+    if (argc < 1 || !VAL_IS_NUMBER(argv[0]))
         return NULL_VAL;
-    return NUMBER_VAL(fabs(VAL_AS_NUMBER(args[0])));
+    return NUMBER_VAL(fabs(VAL_AS_NUMBER(argv[0])));
 }
 
-xen_value xen_num_floor(i32 argc, xen_value* args) {
-    if (argc < 1 || !VAL_IS_NUMBER(args[0]))
+xen_value xen_num_floor(i32 argc, xen_value* argv) {
+    if (argc < 1 || !VAL_IS_NUMBER(argv[0]))
         return NULL_VAL;
-    return NUMBER_VAL(floor(VAL_AS_NUMBER(args[0])));
+    return NUMBER_VAL(floor(VAL_AS_NUMBER(argv[0])));
 }
 
-xen_value xen_num_ceil(i32 argc, xen_value* args) {
-    if (argc < 1 || !VAL_IS_NUMBER(args[0]))
+xen_value xen_num_ceil(i32 argc, xen_value* argv) {
+    if (argc < 1 || !VAL_IS_NUMBER(argv[0]))
         return NULL_VAL;
-    return NUMBER_VAL(ceil(VAL_AS_NUMBER(args[0])));
+    return NUMBER_VAL(ceil(VAL_AS_NUMBER(argv[0])));
 }
 
-xen_value xen_num_round(i32 argc, xen_value* args) {
-    if (argc < 1 || !VAL_IS_NUMBER(args[0]))
+xen_value xen_num_round(i32 argc, xen_value* argv) {
+    if (argc < 1 || !VAL_IS_NUMBER(argv[0]))
         return NULL_VAL;
-    return NUMBER_VAL(round(VAL_AS_NUMBER(args[0])));
+    return NUMBER_VAL(round(VAL_AS_NUMBER(argv[0])));
 }
 
-xen_value xen_num_to_string(i32 argc, xen_value* args) {
-    if (argc < 1 || !VAL_IS_NUMBER(args[0]))
+xen_value xen_num_to_string(i32 argc, xen_value* argv) {
+    if (argc < 1 || !VAL_IS_NUMBER(argv[0]))
         return NULL_VAL;
     char buffer[32];
-    i32 len = snprintf(buffer, sizeof(buffer), "%g", VAL_AS_NUMBER(args[0]));
+    i32 len = snprintf(buffer, sizeof(buffer), "%g", VAL_AS_NUMBER(argv[0]));
     return OBJ_VAL(xen_obj_str_copy(buffer, len));
 }
 
@@ -922,18 +1099,18 @@ xen_value xen_num_to_string(i32 argc, xen_value* args) {
 // Dictionary methods (exposed for type methods)
 // ============================================================================
 
-xen_value xen_dict_len(i32 argc, xen_value* args) {
-    if (argc < 1 || !OBJ_IS_DICT(args[0]))
+xen_value xen_dict_len(i32 argc, xen_value* argv) {
+    if (argc < 1 || !OBJ_IS_DICT(argv[0]))
         return NUMBER_VAL(0);
-    xen_obj_dict* dict = OBJ_AS_DICT(args[0]);
+    xen_obj_dict* dict = OBJ_AS_DICT(argv[0]);
     return NUMBER_VAL(dict->table.count);
 }
 
-xen_value xen_dict_keys(i32 argc, xen_value* args) {
-    if (argc < 1 || !OBJ_IS_DICT(args[0]))
+xen_value xen_dict_keys(i32 argc, xen_value* argv) {
+    if (argc < 1 || !OBJ_IS_DICT(argv[0]))
         return NULL_VAL;
 
-    xen_obj_dict* dict  = OBJ_AS_DICT(args[0]);
+    xen_obj_dict* dict  = OBJ_AS_DICT(argv[0]);
     xen_obj_array* keys = xen_obj_array_new();
 
     for (i32 i = 0; i < dict->table.capacity; i++) {
@@ -946,11 +1123,11 @@ xen_value xen_dict_keys(i32 argc, xen_value* args) {
     return OBJ_VAL(keys);
 }
 
-xen_value xen_dict_values(i32 argc, xen_value* args) {
-    if (argc < 1 || !OBJ_IS_DICT(args[0]))
+xen_value xen_dict_values(i32 argc, xen_value* argv) {
+    if (argc < 1 || !OBJ_IS_DICT(argv[0]))
         return NULL_VAL;
 
-    xen_obj_dict* dict    = OBJ_AS_DICT(args[0]);
+    xen_obj_dict* dict    = OBJ_AS_DICT(argv[0]);
     xen_obj_array* values = xen_obj_array_new();
 
     for (i32 i = 0; i < dict->table.capacity; i++) {
@@ -963,28 +1140,28 @@ xen_value xen_dict_values(i32 argc, xen_value* args) {
     return OBJ_VAL(values);
 }
 
-xen_value xen_dict_has(i32 argc, xen_value* args) {
-    if (argc < 2 || !OBJ_IS_DICT(args[0]))
+xen_value xen_dict_has(i32 argc, xen_value* argv) {
+    if (argc < 2 || !OBJ_IS_DICT(argv[0]))
         return BOOL_VAL(XEN_FALSE);
 
-    xen_obj_dict* dict = OBJ_AS_DICT(args[0]);
+    xen_obj_dict* dict = OBJ_AS_DICT(argv[0]);
     xen_value dummy;
-    return BOOL_VAL(xen_obj_dict_get(dict, args[1], &dummy));
+    return BOOL_VAL(xen_obj_dict_get(dict, argv[1], &dummy));
 }
 
-xen_value xen_dict_remove(i32 argc, xen_value* args) {
-    if (argc < 2 || !OBJ_IS_DICT(args[0]))
+xen_value xen_dict_remove(i32 argc, xen_value* argv) {
+    if (argc < 2 || !OBJ_IS_DICT(argv[0]))
         return BOOL_VAL(XEN_FALSE);
 
-    xen_obj_dict* dict = OBJ_AS_DICT(args[0]);
-    return BOOL_VAL(xen_obj_dict_delete(dict, args[1]));
+    xen_obj_dict* dict = OBJ_AS_DICT(argv[0]);
+    return BOOL_VAL(xen_obj_dict_delete(dict, argv[1]));
 }
 
-xen_value xen_dict_clear(i32 argc, xen_value* args) {
-    if (argc < 1 || !OBJ_IS_DICT(args[0]))
+xen_value xen_dict_clear(i32 argc, xen_value* argv) {
+    if (argc < 1 || !OBJ_IS_DICT(argv[0]))
         return NULL_VAL;
 
-    xen_obj_dict* dict = OBJ_AS_DICT(args[0]);
+    xen_obj_dict* dict = OBJ_AS_DICT(argv[0]);
     xen_table_free(&dict->table);
     xen_table_init(&dict->table);
     return NULL_VAL;
