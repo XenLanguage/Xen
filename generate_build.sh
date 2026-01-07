@@ -185,7 +185,7 @@ for platform in "${PLATFORMS[@]}"; do
         BUILD_DIR="build/${platform}-${config}"
         
         if [ ! -f "${BUILD_DIR}/build.ninja" ]; then
-            echo "⚠️  Skipping ${platform}-${config} (build files not found)"
+            echo "[!] Skipping ${platform}-${config} (build files not found)"
             continue
         fi
         
