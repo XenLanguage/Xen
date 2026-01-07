@@ -14,7 +14,8 @@ If you want to try the current version of Xen for yourself, you can download [pr
 
 ## Examples
 
-Example code can be found in the [examples](examples) directory.
+Example code can be found in the [examples](examples) directory. Until documentation is completed, the [xbuiltin.c](src/xbuiltin.c) file contains
+all of the definitions for built in functions (like `os.println`);
 
 ## License
 
