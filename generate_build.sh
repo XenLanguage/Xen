@@ -12,6 +12,7 @@ PLATFORMS=(
     "linux:gcc:"
     "windows:x86_64-w64-mingw32-gcc:.exe"
     "macos:x86_64-apple-darwin25.2-cc:"
+    "macos-arm:arm64-apple-darwin25.2-cc:"
 )
 
 # Common flags
@@ -25,14 +26,14 @@ generate_ninja() {
     local platform=$1
     local compiler=$2
     local exe_suffix=$3
-    local config=$4  # debug or release
-    
+    local config=$4 # debug or release
+
     local build_dir="build/${platform}-${config}"
-    local obj_dir="obj"  # Relative to build_dir
-    local bin_dir="bin"  # Relative to build_dir
+    local obj_dir="obj" # Relative to build_dir
+    local bin_dir="bin" # Relative to build_dir
     local exe_name="${PROJECT_NAME}${exe_suffix}"
     local ninja_file="${build_dir}/build.ninja"
-    
+
     # Set config-specific flags
     local config_flags=""
     if [ "$config" = "debug" ]; then
@@ -40,12 +41,12 @@ generate_ninja() {
     else
         config_flags="-O2 -DNDEBUG"
     fi
-    
+
     # Create build directory
     mkdir -p "$build_dir"
-    
+
     # Generate build.ninja
-    cat > "$ninja_file" << EOF
+    cat >"$ninja_file" <<EOF
 # Auto-generated Ninja build file for ${platform} (${config})
 # Regenerate with: ./generate_build.sh
 
@@ -77,22 +78,22 @@ EOF
         local obj="${obj_dir}/${rel_src%.c}.o"
         # Make source path relative to build_dir (go up two levels)
         local src_path="../../${src}"
-        echo "build ${obj}: compile ${src_path}" >> "$ninja_file"
+        echo "build ${obj}: compile ${src_path}" >>"$ninja_file"
         objects="${objects} ${obj}"
     done
-    
-    echo "" >> "$ninja_file"
-    
+
+    echo "" >>"$ninja_file"
+
     # Generate link statement
-    echo "build ${bin_dir}/${exe_name}: link${objects}" >> "$ninja_file"
-    echo "" >> "$ninja_file"
-    
+    echo "build ${bin_dir}/${exe_name}: link${objects}" >>"$ninja_file"
+    echo "" >>"$ninja_file"
+
     # Default target
-    echo "default ${bin_dir}/${exe_name}" >> "$ninja_file"
-    echo "" >> "$ninja_file"
-    
+    echo "default ${bin_dir}/${exe_name}" >>"$ninja_file"
+    echo "" >>"$ninja_file"
+
     # Phony targets
-    cat >> "$ninja_file" << EOF
+    cat >>"$ninja_file" <<EOF
 # Phony targets
 build run: phony ${bin_dir}/${exe_name}
   pool = console
@@ -100,7 +101,7 @@ build run: phony ${bin_dir}/${exe_name}
 build clean: phony
   pool = console
 EOF
-    
+
     echo "Generated: ${ninja_file}"
 }
 
@@ -116,14 +117,14 @@ echo "Generating Ninja build files..."
 echo ""
 
 for platform_config in "${PLATFORMS[@]}"; do
-    IFS=':' read -r platform compiler exe_suffix <<< "$platform_config"
-    
+    IFS=':' read -r platform compiler exe_suffix <<<"$platform_config"
+
     generate_ninja "$platform" "$compiler" "$exe_suffix" "debug"
     generate_ninja "$platform" "$compiler" "$exe_suffix" "release"
 done
 
 # Create a master build script for convenience
-cat > build.sh << 'EOF'
+cat >build.sh <<'EOF'
 #!/usr/bin/env bash
 # Convenience build script
 
@@ -145,7 +146,7 @@ EOF
 
 chmod +x build.sh
 
-cat > run.sh << 'EOF'
+cat >run.sh <<'EOF'
 #!/usr/bin/env bash
 # Run the built executable
 
@@ -165,13 +166,13 @@ EOF
 
 chmod +x run.sh
 
-cat > build_all.sh << 'EOF'
+cat >build_all.sh <<'EOF'
 #!/usr/bin/env bash
 # Build all platforms and configurations
 
 set -e
 
-PLATFORMS=(linux windows macos)
+PLATFORMS=(linux windows macos macos-arm)
 CONFIGS=(debug release)
 
 echo "Building all platforms and configurations..."

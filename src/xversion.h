@@ -3,8 +3,8 @@
 
 #define VERSION_MAJOR 0
 #define VERSION_MINOR 5
-#define VERSION_PATCH 1
-#define VERSION_STRING "0.5.1"
+#define VERSION_PATCH 2
+#define VERSION_STRING "0.5.2"
 
 #ifdef __linux
     #define PLATFORM_STRING "linux-x64"
