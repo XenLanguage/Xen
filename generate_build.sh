@@ -127,7 +127,7 @@ if [ ! -f "${BUILD_DIR}/build.ninja" ]; then
 fi
 
 cd "$BUILD_DIR"
-ninja "$@"
+ninja
 EOF
 
 chmod +x build.sh
