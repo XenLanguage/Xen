@@ -1,23 +1,91 @@
 #include "xbuiltin_net.h"
 #include "xbuiltin_common.h"
 
-#ifdef __linux
-    #include <unistd.h>
-    #include <sys/socket.h>
-    #include <netinet/in.h>
-    #include <arpa/inet.h>
-    #include <errno.h>
-#else
-    #error "The net namespace is currently only available for Linux."
+//==============================================================//
+//                          Globals                             //
+//==============================================================//
+
+static xen_obj_class* g_tcp_stream_class = NULL;
+
+//==============================================================//
+//                  Platform Initialization                     //
+//==============================================================//
+
+#ifdef PLATFORM_WINDOWS
+static bool winsock_initialized = XEN_FALSE;
+
+static bool init_winsock() {
+    if (winsock_initialized)
+        return XEN_TRUE;
+
+    WSADATA wsa_data;
+    int result = WSAStartup(MAKEWORD(2, 2), &wsa_data);
+    if (result != 0) {
+        xen_runtime_error("[Net] WSAStartup failed with error: %d", result);
+        return XEN_FALSE;
+    }
+    winsock_initialized = XEN_TRUE;
+    return XEN_TRUE;
+}
+
+static void cleanup_winsock() {
+    if (winsock_initialized) {
+        WSACleanup();
+        winsock_initialized = XEN_FALSE;
+    }
+}
 #endif
+
+//==============================================================//
+//                  Platform-Agnostic Helpers                   //
+//==============================================================//
+
+static const char* get_socket_error() {
+#ifdef PLATFORM_WINDOWS
+    static char error_buffer[256];
+    int error_code = WSAGetLastError();
+    FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+                   NULL,
+                   error_code,
+                   MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                   error_buffer,
+                   sizeof(error_buffer),
+                   NULL);
+    // Remove trailing newline
+    size_t len = strlen(error_buffer);
+    if (len > 0 && error_buffer[len - 1] == '\n') {
+        error_buffer[len - 1] = '\0';
+        if (len > 1 && error_buffer[len - 2] == '\r') {
+            error_buffer[len - 2] = '\0';
+        }
+    }
+    return error_buffer;
+#else
+    return strerror(errno);
+#endif
+}
+
+static ssize_t socket_read(socket_t fd, void* buffer, size_t size) {
+#ifdef PLATFORM_WINDOWS
+    return recv(fd, (char*)buffer, (int)size, 0);
+#else
+    return read(fd, buffer, size);
+#endif
+}
+
+static ssize_t socket_write(socket_t fd, const void* buffer, size_t size) {
+#ifdef PLATFORM_WINDOWS
+    return send(fd, (const char*)buffer, (int)size, 0);
+#else
+    return write(fd, buffer, size);
+#endif
+}
 
 //==============================================================//
 //                      TcpStream Class                         //
 //==============================================================//
 
 // Native initializer: init(fd, remote_addr, remote_port)
-// This is typically called internally by TcpListener.accept()
-// args[0] = instance (this), args[1] = fd, args[2] = remote_addr (string), args[3] = remote_port
 static xen_value tcp_stream_init(i32 argc, xen_value* args) {
     xen_obj_instance* self = OBJ_AS_INSTANCE(args[0]);
 
@@ -26,10 +94,10 @@ static xen_value tcp_stream_init(i32 argc, xen_value* args) {
         return NULL_VAL;
     }
 
-    i32 fd = (i32)VAL_AS_NUMBER(args[1]);
+    socket_t fd = (socket_t)VAL_AS_NUMBER(args[1]);
 
     // Set properties (fd=0, remote_addr=1, remote_port=2)
-    self->fields[0] = NUMBER_VAL(fd);
+    self->fields[0] = NUMBER_VAL((double)fd);
     self->fields[1] = argc > 2 ? args[2] : NULL_VAL;       // remote_addr
     self->fields[2] = argc > 3 ? args[3] : NUMBER_VAL(0);  // remote_port
 
@@ -43,9 +111,9 @@ static xen_value tcp_stream_read(i32 argc, xen_value* args) {
     }
 
     xen_obj_instance* self = OBJ_AS_INSTANCE(args[0]);
-    i32 fd                 = (i32)VAL_AS_NUMBER(self->fields[0]);
+    socket_t fd            = (socket_t)VAL_AS_NUMBER(self->fields[0]);
 
-    if (fd < 0) {
+    if (fd == INVALID_SOCKET_FD) {
         xen_runtime_error("[TcpStream] Socket is closed");
         return NULL_VAL;
     }
@@ -65,11 +133,11 @@ static xen_value tcp_stream_read(i32 argc, xen_value* args) {
         return NULL_VAL;
     }
 
-    ssize_t bytes_read = read(fd, buffer, max_bytes);
+    ssize_t bytes_read = socket_read(fd, buffer, max_bytes);
 
     if (bytes_read < 0) {
         free(buffer);
-        xen_runtime_error("[TcpStream] read() failed: %s", strerror(errno));
+        xen_runtime_error("[TcpStream] read() failed: %s", get_socket_error());
         return NULL_VAL;
     }
 
@@ -92,9 +160,9 @@ static xen_value tcp_stream_write(i32 argc, xen_value* args) {
     }
 
     xen_obj_instance* self = OBJ_AS_INSTANCE(args[0]);
-    i32 fd                 = (i32)VAL_AS_NUMBER(self->fields[0]);
+    socket_t fd            = (socket_t)VAL_AS_NUMBER(self->fields[0]);
 
-    if (fd < 0) {
+    if (fd == INVALID_SOCKET_FD) {
         xen_runtime_error("[TcpStream] Socket is closed");
         return NUMBER_VAL(-1);
     }
@@ -105,10 +173,10 @@ static xen_value tcp_stream_write(i32 argc, xen_value* args) {
     }
 
     xen_obj_str* data     = OBJ_AS_STRING(args[1]);
-    ssize_t bytes_written = write(fd, data->str, data->length);
+    ssize_t bytes_written = socket_write(fd, data->str, data->length);
 
     if (bytes_written < 0) {
-        xen_runtime_error("[TcpStream] write() failed: %s", strerror(errno));
+        xen_runtime_error("[TcpStream] write() failed: %s", get_socket_error());
         return NUMBER_VAL(-1);
     }
 
@@ -122,9 +190,9 @@ static xen_value tcp_stream_send(i32 argc, xen_value* args) {
     }
 
     xen_obj_instance* self = OBJ_AS_INSTANCE(args[0]);
-    i32 fd                 = (i32)VAL_AS_NUMBER(self->fields[0]);
+    socket_t fd            = (socket_t)VAL_AS_NUMBER(self->fields[0]);
 
-    if (fd < 0) {
+    if (fd == INVALID_SOCKET_FD) {
         xen_runtime_error("[TcpStream] Socket is closed");
         return NUMBER_VAL(-1);
     }
@@ -134,11 +202,15 @@ static xen_value tcp_stream_send(i32 argc, xen_value* args) {
         return NUMBER_VAL(-1);
     }
 
-    xen_obj_str* data  = OBJ_AS_STRING(args[1]);
+    xen_obj_str* data = OBJ_AS_STRING(args[1]);
+#ifdef PLATFORM_WINDOWS
     ssize_t bytes_sent = send(fd, data->str, data->length, 0);
+#else
+    ssize_t bytes_sent = send(fd, data->str, data->length, 0);
+#endif
 
     if (bytes_sent < 0) {
-        xen_runtime_error("[TcpStream] send() failed: %s", strerror(errno));
+        xen_runtime_error("[TcpStream] send() failed: %s", get_socket_error());
         return NUMBER_VAL(-1);
     }
 
@@ -152,9 +224,9 @@ static xen_value tcp_stream_recv(i32 argc, xen_value* args) {
     }
 
     xen_obj_instance* self = OBJ_AS_INSTANCE(args[0]);
-    i32 fd                 = (i32)VAL_AS_NUMBER(self->fields[0]);
+    socket_t fd            = (socket_t)VAL_AS_NUMBER(self->fields[0]);
 
-    if (fd < 0) {
+    if (fd == INVALID_SOCKET_FD) {
         xen_runtime_error("[TcpStream] Socket is closed");
         return NULL_VAL;
     }
@@ -174,11 +246,15 @@ static xen_value tcp_stream_recv(i32 argc, xen_value* args) {
         return NULL_VAL;
     }
 
+#ifdef PLATFORM_WINDOWS
     ssize_t bytes_recv = recv(fd, buffer, max_bytes, 0);
+#else
+    ssize_t bytes_recv = recv(fd, buffer, max_bytes, 0);
+#endif
 
     if (bytes_recv < 0) {
         free(buffer);
-        xen_runtime_error("[TcpStream] recv() failed: %s", strerror(errno));
+        xen_runtime_error("[TcpStream] recv() failed: %s", get_socket_error());
         return NULL_VAL;
     }
 
@@ -200,13 +276,13 @@ static xen_value tcp_stream_close(i32 argc, xen_value* args) {
     }
 
     xen_obj_instance* self = OBJ_AS_INSTANCE(args[0]);
-    i32 fd                 = (i32)VAL_AS_NUMBER(self->fields[0]);
+    socket_t fd            = (socket_t)VAL_AS_NUMBER(self->fields[0]);
 
-    if (fd >= 0) {
-        if (close(fd) < 0) {
-            xen_runtime_error("[TcpStream] close() failed: %s", strerror(errno));
+    if (fd != INVALID_SOCKET_FD) {
+        if (CLOSE_SOCKET(fd) < 0) {
+            xen_runtime_error("[TcpStream] close() failed: %s", get_socket_error());
         }
-        self->fields[0] = NUMBER_VAL(-1);
+        self->fields[0] = NUMBER_VAL((double)INVALID_SOCKET_FD);
     }
 
     return NULL_VAL;
@@ -219,26 +295,26 @@ static xen_value tcp_stream_shutdown(i32 argc, xen_value* args) {
     }
 
     xen_obj_instance* self = OBJ_AS_INSTANCE(args[0]);
-    i32 fd                 = (i32)VAL_AS_NUMBER(self->fields[0]);
+    socket_t fd            = (socket_t)VAL_AS_NUMBER(self->fields[0]);
 
-    if (fd < 0) {
+    if (fd == INVALID_SOCKET_FD) {
         xen_runtime_error("[TcpStream] Socket is closed");
         return BOOL_VAL(XEN_FALSE);
     }
 
-    i32 how = SHUT_RDWR;  // Default: shutdown both read and write
+    int how = SHUTDOWN_BOTH;  // Default: shutdown both read and write
     if (argc > 1 && VAL_IS_NUMBER(args[1])) {
         i32 how_arg = (i32)VAL_AS_NUMBER(args[1]);
         if (how_arg == 0)
-            how = SHUT_RD;
+            how = SHUTDOWN_READ;
         else if (how_arg == 1)
-            how = SHUT_WR;
+            how = SHUTDOWN_WRITE;
         else
-            how = SHUT_RDWR;
+            how = SHUTDOWN_BOTH;
     }
 
     if (shutdown(fd, how) < 0) {
-        xen_runtime_error("[TcpStream] shutdown() failed: %s", strerror(errno));
+        xen_runtime_error("[TcpStream] shutdown() failed: %s", get_socket_error());
         return BOOL_VAL(XEN_FALSE);
     }
 
@@ -251,7 +327,7 @@ static xen_obj_class* create_tcp_stream_class() {
 
     // Properties: _fd, remote_addr, remote_port
     xen_obj_str* fd_name = xen_obj_str_copy("_fd", 3);
-    xen_obj_class_add_property(class, fd_name, NUMBER_VAL(-1), XEN_TRUE);
+    xen_obj_class_add_property(class, fd_name, NUMBER_VAL((double)INVALID_SOCKET_FD), XEN_TRUE);
 
     xen_obj_str* addr_name = xen_obj_str_copy("remote_addr", 11);
     xen_obj_class_add_property(class, addr_name, NULL_VAL, XEN_FALSE);
@@ -276,9 +352,14 @@ static xen_obj_class* create_tcp_stream_class() {
 //==============================================================//
 
 // Native initializer: init(port)
-// args[0] = instance (this), args[1] = port
 static xen_value tcp_listener_init(i32 argc, xen_value* args) {
     xen_obj_instance* self = OBJ_AS_INSTANCE(args[0]);
+
+#ifdef PLATFORM_WINDOWS
+    if (!init_winsock()) {
+        return NULL_VAL;
+    }
+#endif
 
     if (argc < 2) {
         xen_runtime_error("TcpListener requires a port number");
@@ -292,9 +373,9 @@ static xen_value tcp_listener_init(i32 argc, xen_value* args) {
 
     i32 port = (i32)VAL_AS_NUMBER(args[1]);
 
-    // Set properties (assuming port is index 0, _socket is index 1)
+    // Set properties (port is index 0, _socket is index 1)
     self->fields[0] = NUMBER_VAL(port);
-    self->fields[1] = NUMBER_VAL(-1);  // socket fd, -1 = not bound
+    self->fields[1] = NUMBER_VAL((double)INVALID_SOCKET_FD);
 
     return OBJ_VAL(self);
 }
@@ -307,41 +388,45 @@ static xen_value tcp_listener_bind(i32 argc, xen_value* args) {
 
     xen_obj_instance* self = OBJ_AS_INSTANCE(args[0]);
     i32 port               = (i32)VAL_AS_NUMBER(self->fields[0]);
-    i32 socket_fd          = (i32)VAL_AS_NUMBER(self->fields[1]);
+    socket_t socket_fd     = (socket_t)VAL_AS_NUMBER(self->fields[1]);
 
-    if (socket_fd >= 0) {
+    if (socket_fd != INVALID_SOCKET_FD) {
         xen_runtime_error("[TcpListener] Socket is already bound");
         return BOOL_VAL(XEN_FALSE);
     }
 
     socket_fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (socket_fd < 0) {
-        xen_runtime_error("[TcpListener] Failed to create socket: %s", strerror(errno));
+    if (socket_fd == INVALID_SOCKET_FD) {
+        xen_runtime_error("[TcpListener] Failed to create socket: %s", get_socket_error());
         return BOOL_VAL(XEN_FALSE);
     }
 
     // Set SO_REUSEADDR to allow quick rebinding
-    i32 opt = 1;
+    int opt = 1;
+#ifdef PLATFORM_WINDOWS
+    if (setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, (const char*)&opt, sizeof(opt)) < 0) {
+#else
     if (setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
-        close(socket_fd);
-        xen_runtime_error("[TcpListener] setsockopt() failed: %s", strerror(errno));
+#endif
+        CLOSE_SOCKET(socket_fd);
+        xen_runtime_error("[TcpListener] setsockopt() failed: %s", get_socket_error());
         return BOOL_VAL(XEN_FALSE);
     }
 
     struct sockaddr_in address;
     memset(&address, 0, sizeof(address));
     address.sin_family      = AF_INET;
-    address.sin_addr.s_addr = INADDR_ANY;  // Listen on all interfaces
+    address.sin_addr.s_addr = INADDR_ANY;
     address.sin_port        = htons((u16)port);
 
     if (bind(socket_fd, (struct sockaddr*)&address, sizeof(address)) < 0) {
-        close(socket_fd);
-        xen_runtime_error("[TcpListener] bind() failed on port %d: %s", port, strerror(errno));
+        CLOSE_SOCKET(socket_fd);
+        xen_runtime_error("[TcpListener] bind() failed on port %d: %s", port, get_socket_error());
         return BOOL_VAL(XEN_FALSE);
     }
 
     printf("[TcpListener] Binding to port %d\n", port);
-    self->fields[1] = NUMBER_VAL(socket_fd);
+    self->fields[1] = NUMBER_VAL((double)socket_fd);
 
     return BOOL_VAL(XEN_TRUE);
 }
@@ -353,9 +438,9 @@ static xen_value tcp_listener_listen(i32 argc, xen_value* args) {
     }
 
     xen_obj_instance* self = OBJ_AS_INSTANCE(args[0]);
-    i32 socket_fd          = (i32)VAL_AS_NUMBER(self->fields[1]);
+    socket_t socket_fd     = (socket_t)VAL_AS_NUMBER(self->fields[1]);
 
-    if (socket_fd < 0) {
+    if (socket_fd == INVALID_SOCKET_FD) {
         xen_runtime_error("[TcpListener] Socket not bound - call bind() first");
         return BOOL_VAL(XEN_FALSE);
     }
@@ -368,7 +453,7 @@ static xen_value tcp_listener_listen(i32 argc, xen_value* args) {
     }
 
     if (listen(socket_fd, backlog) < 0) {
-        xen_runtime_error("[TcpListener] listen() failed: %s", strerror(errno));
+        xen_runtime_error("[TcpListener] listen() failed: %s", get_socket_error());
         return BOOL_VAL(XEN_FALSE);
     }
 
@@ -376,34 +461,41 @@ static xen_value tcp_listener_listen(i32 argc, xen_value* args) {
     return BOOL_VAL(XEN_TRUE);
 }
 
-static xen_obj_class* g_tcp_stream_class = NULL;
-
-// Method: accept() -> returns client socket fd (will return TcpStream instance once that's implemented)
+// Method: accept() -> returns TcpStream instance
 static xen_value tcp_listener_accept(i32 argc, xen_value* args) {
     if (argc < 1 || !OBJ_IS_INSTANCE(args[0])) {
         return NULL_VAL;
     }
 
     xen_obj_instance* self = OBJ_AS_INSTANCE(args[0]);
-    i32 socket_fd          = (i32)VAL_AS_NUMBER(self->fields[1]);
+    socket_t socket_fd     = (socket_t)VAL_AS_NUMBER(self->fields[1]);
 
-    if (socket_fd < 0) {
+    if (socket_fd == INVALID_SOCKET_FD) {
         xen_runtime_error("[TcpListener] Socket not bound - call bind() and listen() first");
         return NULL_VAL;
     }
 
     struct sockaddr_in client_addr;
+#ifdef PLATFORM_WINDOWS
+    int addr_len = sizeof(client_addr);
+#else
     socklen_t addr_len = sizeof(client_addr);
+#endif
 
-    i32 client_fd = accept(socket_fd, (struct sockaddr*)&client_addr, &addr_len);
+    socket_t client_fd = accept(socket_fd, (struct sockaddr*)&client_addr, &addr_len);
 
-    if (client_fd < 0) {
-        xen_runtime_error("[TcpListener] accept() failed: %s", strerror(errno));
+    if (client_fd == INVALID_SOCKET_FD) {
+        xen_runtime_error("[TcpListener] accept() failed: %s", get_socket_error());
         return NULL_VAL;
     }
 
     // Get client address as string
-    char* addr_str           = inet_ntoa(client_addr.sin_addr);
+    char addr_str[INET_ADDRSTRLEN];
+#ifdef PLATFORM_WINDOWS
+    inet_ntop(AF_INET, &client_addr.sin_addr, addr_str, INET_ADDRSTRLEN);
+#else
+    inet_ntop(AF_INET, &client_addr.sin_addr, addr_str, INET_ADDRSTRLEN);
+#endif
     xen_obj_str* remote_addr = xen_obj_str_copy(addr_str, strlen(addr_str));
     u16 remote_port          = ntohs(client_addr.sin_port);
 
@@ -412,7 +504,7 @@ static xen_value tcp_listener_accept(i32 argc, xen_value* args) {
     xen_obj_instance* stream        = xen_obj_instance_new(tcp_stream_class);
 
     // Initialize the stream with fd, remote_addr, remote_port
-    stream->fields[0] = NUMBER_VAL(client_fd);
+    stream->fields[0] = NUMBER_VAL((double)client_fd);
     stream->fields[1] = OBJ_VAL(remote_addr);
     stream->fields[2] = NUMBER_VAL(remote_port);
 
@@ -426,13 +518,13 @@ static xen_value tcp_listener_close(i32 argc, xen_value* args) {
     }
 
     xen_obj_instance* self = OBJ_AS_INSTANCE(args[0]);
-    i32 fd                 = (i32)VAL_AS_NUMBER(self->fields[1]);
+    socket_t fd            = (socket_t)VAL_AS_NUMBER(self->fields[1]);
 
-    if (fd >= 0) {
-        if (close(fd) < 0) {
-            xen_runtime_error("[TcpListener] close() failed: %s", strerror(errno));
+    if (fd != INVALID_SOCKET_FD) {
+        if (CLOSE_SOCKET(fd) < 0) {
+            xen_runtime_error("[TcpListener] close() failed: %s", get_socket_error());
         }
-        self->fields[1] = NUMBER_VAL(-1);
+        self->fields[1] = NUMBER_VAL((double)INVALID_SOCKET_FD);
     }
 
     return NULL_VAL;
@@ -446,7 +538,7 @@ static xen_obj_class* create_tcp_listener_class() {
     xen_obj_class_add_property(class, port_name, NUMBER_VAL(0), XEN_FALSE);
 
     xen_obj_str* socket_name = xen_obj_str_copy("_socket", 7);
-    xen_obj_class_add_property(class, socket_name, NUMBER_VAL(-1), XEN_TRUE);
+    xen_obj_class_add_property(class, socket_name, NUMBER_VAL((double)INVALID_SOCKET_FD), XEN_TRUE);
 
     xen_obj_class_set_native_init(class, tcp_listener_init);
 

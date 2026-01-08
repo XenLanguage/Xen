@@ -1,6 +1,6 @@
 Name:           Xen
 %global debug_package %{nil}
-Version:        0.5.2
+Version:        0.5.3
 Release:        1%{?dist}
 Summary:        Xen
 
@@ -43,5 +43,6 @@ cp -r examples $RPM_BUILD_ROOT%{_datadir}/xen/
 %{_datadir}/xen/examples/*
 
 %changelog
-* Wed Jan 07 2026 Jake Rieger <contact.jakerieger@gmail.com> - 0.5.2-1
+* Wed Jan 07 2026 Jake Rieger <contact.jakerieger@gmail.com> - 0.5.3-1
 - bug fixes and improvements
+- new net namespace with TcpListener and TcpStream classes

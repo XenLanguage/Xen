@@ -37,6 +37,13 @@ generate_ninja() {
         config_flags="-O2 -DNDEBUG"
     fi
 
+    local link_flags=""
+    if [ "$platform" = "windows" ]; then
+        link_flags="$LDFLAGS -lws2_32" # needed for xbuiltin_net
+    else
+        link_flags="$LDFLAGS"
+    fi
+
     mkdir -p "$build_dir"
 
     cat >"$ninja_file" <<EOF
@@ -48,7 +55,7 @@ ninja_required_version = 1.5
 # Variables
 cc = ${compiler}
 cflags = ${CFLAGS_COMMON} ${config_flags}
-ldflags = ${LDFLAGS}
+ldflags = ${link_flags}
 obj_dir = ${obj_dir}
 bin_dir = ${bin_dir}
 
