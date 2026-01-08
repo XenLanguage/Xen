@@ -4,7 +4,7 @@
 #include "xutils.h"
 #include "xvalue.h"
 #include "xvm.h"
-#include "xbuiltin.h"
+#include "builtin/xbuiltin.h"
 
 #define ALLOCATE_OBJ(type, obj_type) (type*)allocate_obj(sizeof(type), obj_type);
 
@@ -273,15 +273,6 @@ static xen_method_entry array_methods[] = {
     {NULL,        NULL,              XEN_FALSE}
 };
 
-static xen_method_entry number_methods[] = {
-     {"abs",       xen_num_abs,       XEN_FALSE},
-     {"floor",     xen_num_floor,     XEN_FALSE},
-     {"ceil",      xen_num_ceil,      XEN_FALSE},
-     {"round",     xen_num_round,     XEN_FALSE},
-     {"to_string", xen_num_to_string, XEN_FALSE},
-     {NULL,        NULL,              XEN_FALSE}
-};
-
 static xen_method_entry dict_methods[] = {
      {"len",       xen_dict_len,      XEN_TRUE},   // property
      {"keys",      xen_dict_keys,     XEN_FALSE},
@@ -307,10 +298,6 @@ static xen_native_fn lookup_in_table(xen_method_entry* table, const char* name, 
 xen_native_fn xen_lookup_method(xen_value value, const char* name, bool* is_property) {
     if (is_property)
         *is_property = XEN_FALSE;
-
-    if (VAL_IS_NUMBER(value)) {
-        return lookup_in_table(number_methods, name, is_property);
-    }
 
     if (!VAL_IS_OBJ(value)) {
         return NULL;
@@ -368,7 +355,8 @@ xen_obj_class* xen_obj_class_new(xen_obj_str* name) {
     class->property_capacity = 0;
     xen_table_init(&class->methods);
     xen_table_init(&class->private_methods);
-    class->initializer = NULL;
+    class->initializer        = NULL;
+    class->native_initializer = NULL;
     return class;
 }
 
@@ -440,4 +428,16 @@ bool xen_obj_class_is_property_private(xen_obj_class* class, xen_obj_str* name) 
     if (index < 0)
         return XEN_FALSE;
     return class->properties[index].is_private;
+}
+
+void xen_obj_class_set_native_init(xen_obj_class* class, xen_native_fn init_fn) {
+    class->native_initializer = init_fn;
+}
+
+void xen_obj_class_add_native_method(xen_obj_class* class, const char* name, xen_native_fn method, bool is_private) {
+    xen_obj_str* name_str       = xen_obj_str_copy(name, strlen(name));
+    xen_obj_native_func* native = xen_obj_native_func_new(method, name);
+
+    xen_table* table = is_private ? &class->private_methods : &class->methods;
+    xen_table_set(table, name_str, OBJ_VAL(native));
 }

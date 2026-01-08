@@ -7,6 +7,7 @@
 #include "xvalue.h"
 #include "xtable.h"
 #include "xvm.h"
+#include "builtin/xbuiltin.h"
 #include <math.h>
 #include <string.h>
 
@@ -81,19 +82,9 @@ typedef struct class_compiler {
 
 static class_compiler* current_class = NULL;
 
-static const char* builtin_namespaces[] = {
-  "io",
-  "math",
-  "string",
-  "datetime",
-  "array",
-  "os",
-  NULL,  // sentinel
-};
-
 static bool is_valid_namespace(const char* name, i32 length) {
-    for (i32 i = 0; builtin_namespaces[i] != NULL; i++) {
-        if ((i32)strlen(builtin_namespaces[i]) == length && memcmp(builtin_namespaces[i], name, length) == 0) {
+    for (i32 i = 0; xen_builtin_namespaces[i] != NULL; i++) {
+        if ((i32)strlen(xen_builtin_namespaces[i]) == length && memcmp(xen_builtin_namespaces[i], name, length) == 0) {
             return XEN_TRUE;
         }
     }

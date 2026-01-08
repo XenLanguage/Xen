@@ -4,6 +4,7 @@ class Car {
     year;
     make;
     model;
+    private running = true;
 
     init(year, make, model) {
         this.year = year;
@@ -11,9 +12,17 @@ class Car {
         this.model = model;
     }
 
+    private fn print_engine_sound() {
+        if (!this.running) {
+            io.println("click click click.");
+        } else {
+            if (this.year > 2000) { io.println("brrrrrrrrr"); }
+            else { io.println("chuggachuggachugga"); }
+        }
+    }
+
     fn start_engine() {
-        if (this.year > 2000) { io.println("brrrrrrrrr"); }
-        else { io.println("chuggachuggachugga"); }
+        this.print_engine_sound();
     }
 
     fn show_year() => this.year

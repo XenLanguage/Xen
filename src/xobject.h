@@ -94,7 +94,8 @@ struct xen_obj_class {
     xen_table methods;          // name -> xen_obj_func*
     xen_table private_methods;  // name -> xen_obj_func*
 
-    xen_obj_func* initializer;  // init() method
+    xen_obj_func* initializer;         // init() method
+    xen_native_fn native_initializer;  // init() for native classes
 };
 
 typedef struct {
@@ -182,5 +183,7 @@ bool xen_obj_instance_set(xen_obj_instance* inst, xen_obj_str* name, xen_value v
 
 i32 xen_find_property_index(xen_obj_class* class, xen_obj_str* name);
 bool xen_obj_class_is_property_private(xen_obj_class* class, xen_obj_str* name);
+void xen_obj_class_set_native_init(xen_obj_class* class, xen_native_fn init_fn);
+void xen_obj_class_add_native_method(xen_obj_class* class, const char* name, xen_native_fn method, bool is_private);
 
 #endif

@@ -11,7 +11,8 @@
 #include "xtable.h"
 #include "xutils.h"
 #include "xvalue.h"
-#include "xbuiltin.h"
+#include "xtypeid.h"
+#include "builtin/xbuiltin.h"
 
 //====================================================================================================================//
 
@@ -383,12 +384,21 @@ static xen_exec_result run() {
                         }
                     }
 
-                    // Then check methods
                     xen_value method;
                     if (xen_table_get(&instance->class->methods, name, &method)) {
-                        xen_value receiver          = stack_pop();
-                        xen_obj_bound_method* bound = xen_obj_bound_method_new_func(receiver, OBJ_AS_FUNCTION(method));
-                        stack_push(OBJ_VAL(bound));
+                        xen_value receiver = stack_pop();
+
+                        if (OBJ_IS_NATIVE_FUNC(method)) {
+                            // Native method - bind it
+                            xen_obj_bound_method* bound =
+                              xen_obj_bound_method_new(receiver, OBJ_AS_NATIVE_FUNC(method)->function, name->str);
+                            stack_push(OBJ_VAL(bound));
+                        } else {
+                            // Bytecode method
+                            xen_obj_bound_method* bound =
+                              xen_obj_bound_method_new_func(receiver, OBJ_AS_FUNCTION(method));
+                            stack_push(OBJ_VAL(bound));
+                        }
                         break;
                     }
 
@@ -397,9 +407,17 @@ static xen_exec_result run() {
                             runtime_error("cannot access private method '%s'", name->str);
                             return EXEC_RUNTIME_ERROR;
                         }
-                        xen_value receiver          = stack_pop();
-                        xen_obj_bound_method* bound = xen_obj_bound_method_new_func(receiver, OBJ_AS_FUNCTION(method));
-                        stack_push(OBJ_VAL(bound));
+                        xen_value receiver = stack_pop();
+
+                        if (OBJ_IS_NATIVE_FUNC(method)) {
+                            xen_obj_bound_method* bound =
+                              xen_obj_bound_method_new(receiver, OBJ_AS_NATIVE_FUNC(method)->function, name->str);
+                            stack_push(OBJ_VAL(bound));
+                        } else {
+                            xen_obj_bound_method* bound =
+                              xen_obj_bound_method_new_func(receiver, OBJ_AS_FUNCTION(method));
+                            stack_push(OBJ_VAL(bound));
+                        }
                         break;
                     }
 
@@ -456,6 +474,17 @@ static xen_exec_result run() {
                     xen_value method;
 
                     if (xen_table_get(&instance->class->methods, method_name, &method)) {
+                        if (OBJ_IS_NATIVE_FUNC(method)) {
+                            // Native method - call directly
+                            xen_native_fn native = OBJ_AS_NATIVE_FUNC(method)->function;
+                            xen_value* args      = g_vm.stack_top - arg_count - 1;
+                            xen_value result     = native(arg_count + 1, args);
+                            g_vm.stack_top -= arg_count + 1;
+                            stack_push(result);
+                            break;
+                        }
+
+                        // Bytecode method
                         if (!call(OBJ_AS_FUNCTION(method), arg_count)) {
                             return EXEC_RUNTIME_ERROR;
                         }
@@ -463,11 +492,22 @@ static xen_exec_result run() {
                         break;
                     }
 
+                    // Same pattern for private_methods...
                     if (xen_table_get(&instance->class->private_methods, method_name, &method)) {
                         if (!is_same_class_context(instance->class)) {
                             runtime_error("cannot access private method '%s'", method_name->str);
                             return EXEC_RUNTIME_ERROR;
                         }
+
+                        if (OBJ_IS_NATIVE_FUNC(method)) {
+                            xen_native_fn native = OBJ_AS_NATIVE_FUNC(method)->function;
+                            xen_value* args      = g_vm.stack_top - arg_count - 1;
+                            xen_value result     = native(arg_count + 1, args);
+                            g_vm.stack_top -= arg_count + 1;
+                            stack_push(result);
+                            break;
+                        }
+
                         if (!call(OBJ_AS_FUNCTION(method), arg_count)) {
                             return EXEC_RUNTIME_ERROR;
                         }
@@ -698,8 +738,24 @@ static xen_exec_result run() {
                 // Replace class on stack with instance
                 g_vm.stack_top[-arg_count - 1] = OBJ_VAL(instance);
 
+                // Check for native initializer first
+                if (class->native_initializer != NULL) {
+                    // Build args array: [instance, arg1, arg2, ...]
+                    xen_value* args  = g_vm.stack_top - arg_count - 1;
+                    xen_value result = class->native_initializer(arg_count + 1, args);
+
+                    // Pop arguments, keep instance on stack
+                    g_vm.stack_top -= arg_count;
+
+                    if (!OBJ_IS_INSTANCE(result) && !VAL_IS_NULL(result)) {
+                        xen_runtime_error("native initializer for class '%s' returned invalid type: %d",
+                                          class->name->str,
+                                          xen_typeid_get(result));
+                        return EXEC_RUNTIME_ERROR;
+                    }
+                }
                 // Call initializer if present
-                if (class->initializer != NULL) {
+                else if (class->initializer != NULL) {
                     if (!call(class->initializer, arg_count)) {
                         return EXEC_RUNTIME_ERROR;
                     }
