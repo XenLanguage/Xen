@@ -43,6 +43,6 @@ cp -r examples $RPM_BUILD_ROOT%{_datadir}/xen/
 %{_datadir}/xen/examples/*
 
 %changelog
-* Wed Jan 07 2026 Jake Rieger <contact.jakerieger@gmail.com> - 0.5.3-1
+* Thur Jan 08 2026 Jake Rieger <contact.jakerieger@gmail.com> - 0.5.3-1
 - bug fixes and improvements
 - new net namespace with TcpListener and TcpStream classes

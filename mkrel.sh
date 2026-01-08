@@ -32,7 +32,7 @@ make_linux_rpm() {
     LINUX_RPM_TAR="$RPMBUILD_ROOT/SOURCES/Xen-$VERSION.tar.gz"
 
     tar czf $LINUX_RPM_TAR \
-        --transform 's,^,Xen-0.5.2/,' \
+        --transform 's,^,Xen-0.5.3/,' \
         --exclude='.git*' \
         --exclude='build' \
         --exclude='obj*' \

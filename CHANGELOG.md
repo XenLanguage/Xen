@@ -1,6 +1,7 @@
 # Changelog
 
 ## Table of Contents
+- [v0.5.2](#v053-january-8-2026)
 - [v0.5.2](#v052-january-7-2026)
 - [v0.5.1](#v051-january-7-2026)
 - [v0.5.0](#v050-january-5-2026)
@@ -9,6 +10,21 @@
 - [v0.3.0](#v030-january-2-2026)
 - [v0.2.0](#v020-january-2-2026)
 - [v0.1.0](#v010-january-1-2026)
+
+## v0.5.3 (January 8, 2026)
+
+### Added
+- `net` namespace with `TcpListener` and `TcpStream` classes:
+```js
+include net;
+var l = new net.TcpListener(8080);
+```
+
+### Changed
+- Refactored builtin code and moved builtin namespace implementations to dedicated source files in [src/builtin](src/builtin)
+
+### Fixed
+- Build system bugs
 
 ## v0.5.2 (January 7, 2026)
 
