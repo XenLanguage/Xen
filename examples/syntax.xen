@@ -1,5 +1,5 @@
 // This file showcases the entire syntax of the Xen programming language
-// All lines must end in a semicolon
+// All lines must end in a semicolon (except for arrow functions '=>')
 
 // Packages are imported like so:
 include io;
@@ -7,6 +7,9 @@ include math;
 include string;
 include datetime;
 include array;
+include dict;
+include os;
+include net;
 
 // Global variables are defined like so:
 var ITERS = 10;
@@ -138,6 +141,51 @@ var do_work = fn() {
 
 do_work();
 
-fn exec(func, arg) => func(arg);
-const var exec_val = exec(fn(x) => ++x;, 10);
+fn exec(func, arg) => func(arg)
+const var exec_val = exec(fn(x) => ++x, 10);
 io.println(exec_val);
+
+class Employee {
+    name;
+    age;
+    gender;
+    private hire_date;
+
+    init(name, age, gender, hire_date) {
+        this.name = name;
+        this.age = age;
+        this.gender = gender;
+        this.hire_date = hire_date;
+    }
+
+    private fn is_minor() {
+        if (this.age < 18) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    fn get_hire_date() => this.hire_date
+};
+
+// Had to put this in a function because the global namespace had too many constants (max is 256)
+fn test_class() {
+    var john = new Employee("John", 34, "male", datetime.now());
+    var stacy = new Employee("Stacy", 32, "female", datetime.now());
+
+    io.println(john.name);
+    io.println(stacy.age);
+    io.println(john.gender);
+    io.println(stacy.get_hire_date());
+
+    if (john.age > 18 or stacy.age > 18) {
+        io.println("Somebody is an adult");
+    }
+
+    if (john.gender == "male" and stacy.gender == "female") {
+        io.println("Yay");
+    }
+}
+
+test_class();
