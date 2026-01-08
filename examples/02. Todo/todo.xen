@@ -1,0 +1,62 @@
+include io;
+
+// Implements a simple CLI TODO application
+// Showcases console I/O and dictionaries
+fn todo() {
+    // { task: completed }
+    const var tasks = {};
+    // Whether our CLI loop should terminate
+    var should_exit = false;
+    
+    // Main loop
+    while (!should_exit) {
+        io.clear(); // Clear the console
+        io.println("Todo Example");
+        io.println("");
+        io.println("[COMMANDS]");
+        io.println("  add   done   exit");
+        io.println("");
+        io.println("Your tasks:");
+
+        if (tasks.values().len == 0) {
+            io.println(" - You have no tasks. Use the `add` command to add a task.");
+        } else {
+            var index = 0;
+            for (var key in tasks.keys()) {
+                var check = "[ ]";
+                if (tasks[key]) {
+                    check = "[x]";
+                }
+
+                io.println(" - (", index, ") ", check, " ", key);
+                index++;
+            }
+        }
+        
+        io.println("");
+        var cmd = io.input("> ");
+
+        if (cmd == "exit") {
+            should_exit = true;
+        } else if (cmd == "add") {
+            io.clear();
+            io.println("Add a task:");
+            const var task = io.input("(task)> ");
+            tasks[task] = false; // add task
+            io.println("Task added. Press enter to return.");
+            io.pause();
+        } else if (cmd == "done") {
+            io.clear();
+            io.println("Mark task completed:");
+            const var index = number(io.input("(task:id)> ")); // task index
+            const var keys = tasks.keys();
+            io.println(keys[index]);
+            tasks[keys[index]] = true;
+            io.println("Task marked as complete. Press enter to return.");
+            io.pause();
+        }
+    }
+}
+
+// Run the program
+todo();

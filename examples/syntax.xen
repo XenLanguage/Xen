@@ -1,6 +1,8 @@
 // This file showcases the entire syntax of the Xen programming language
 // All lines must end in a semicolon (except for arrow functions '=>')
 
+// TODO: Clean this up
+
 // Packages are imported like so:
 include io;
 include math;

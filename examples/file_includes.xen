@@ -1,5 +1,0 @@
-include classes;
-include my_module::module;
-include io;
-
-my_module.module_hello();
