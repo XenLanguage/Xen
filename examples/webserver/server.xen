@@ -1,0 +1,46 @@
+include io;
+include net;
+include os;
+
+class Webserver {
+    port = 3000;
+    private _listener = null;
+
+    init(port) {
+        this.port = port;
+    }
+
+    private fn handle_index_route(conn) {
+        const var html = os.readtxt("./index.html");
+        var response = "HTTP/1.1 200 OK\n";
+        response = response + "Content-Type: text/html\n\n";
+        response = response + html;
+        // TODO: Need more string formatting methods
+        conn.send(response);
+    }
+
+    fn listen() {
+        this._listener = new net.TcpListener(this.port);
+        this._listener.bind_and_listen();
+        
+        io.println("Started server at http://127.0.0.1:", this.port);
+
+        while (true) {
+            var conn = this._listener.accept();
+            if (conn != null) {
+                const var body = conn.read();
+                // TODO: Need more string methods for parsing the request body
+                // GET / HTTP/1.1
+                if (body.substr(0, 3) == "GET") {
+                    this.handle_index_route(conn);
+                }
+            }
+            conn.close();
+        }
+
+        this._listener.close();
+    }
+};
+
+const var server = new Webserver(8080);
+server.listen();
