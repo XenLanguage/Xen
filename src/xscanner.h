@@ -23,6 +23,7 @@ typedef enum {
     TOKEN_DOUBLE_ASTERISK,
     TOKEN_PERCENT,
     TOKEN_COLON,
+    TOKEN_COLON_COLON,
     // One or two character tokens
     TOKEN_BANG,
     TOKEN_BANG_EQUAL,
@@ -47,6 +48,7 @@ typedef enum {
     TOKEN_NUMBER,
     // Keywords
     TOKEN_AND,
+    TOKEN_AS,
     TOKEN_CLASS,
     TOKEN_CONST,
     TOKEN_ELSE,

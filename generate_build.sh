@@ -18,6 +18,10 @@ LDFLAGS="-lm"
 
 SOURCES=$(find "$SRC_DIR" -name "*.c" | sort)
 
+if [ -e "build" ]; then
+    rm -rf build
+fi
+
 generate_ninja() {
     local platform=$1
     local compiler=$2

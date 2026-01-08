@@ -45,7 +45,7 @@ static char advance() {
 
 static bool match(const char expected) {
     if (is_at_end())
-        return XEN_TRUE;
+        return XEN_FALSE;
     if (*scanner.current != expected)
         return XEN_FALSE;
     scanner.current++;
@@ -110,7 +110,15 @@ static xen_token_type check_keyword(const i32 start, const i32 length, const cha
 static xen_token_type identifier_type() {
     switch (scanner.start[0]) {
         case 'a':
-            return check_keyword(1, 2, "nd", TOKEN_AND);
+            if (scanner.current - scanner.start > 1) {
+                switch (scanner.start[1]) {
+                    case 's':
+                        return check_keyword(2, 0, "", TOKEN_AS);
+                    case 'n':
+                        return check_keyword(2, 1, "d", TOKEN_AND);
+                }
+            }
+            break;
         case 'c':
             if (scanner.current - scanner.start > 1) {
                 switch (scanner.start[1]) {
@@ -253,7 +261,7 @@ xen_token xen_scanner_emit() {
         case ',':
             return make_token(TOKEN_COMMA);
         case ':':
-            return make_token(TOKEN_COLON);
+            return make_token(match(':') ? TOKEN_COLON_COLON : TOKEN_COLON);
         case '.':
             return make_token(match('.') ? TOKEN_DOT_DOT : TOKEN_DOT);
         case '-': {
@@ -432,6 +440,10 @@ const char* xen_token_type_to_str(xen_token_type type) {
             return "new";
         case TOKEN_PRIVATE:
             return "private";
+        case TOKEN_COLON_COLON:
+            return "::";
+        case TOKEN_AS:
+            return "as";
     }
     return "";
 }
