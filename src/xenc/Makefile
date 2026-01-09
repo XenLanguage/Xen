@@ -1,5 +1,13 @@
-XENC_SOURCES = $(wildcard $(SRC_DIR)/xenc/*.c)
-XENC_HEADERS = $(wildcard $(SRC_DIR)/xenc/*.h)
+XENC_SOURCES = $(wildcard $(SRC_DIR)/xenc/*.c) \
+			   $(filter-out $(SRC_DIR)/xen/main.c, $(wildcard $(SRC_DIR)/xen/*.c)) \
+               $(wildcard $(SRC_DIR)/xen/builtin/*.c) \
+			   $(wildcard $(SRC_DIR)/xen/object/*.c)
+
+XENC_HEADERS = $(wildcard $(SRC_DIR)/xenc/*.h) \
+			   $(wildcard $(SRC_DIR)/xen/*.h) \
+               $(wildcard $(SRC_DIR)/xen/builtin/*.h) \
+			   $(wildcard $(SRC_DIR)/xen/object/*.h)
+
 XENC_OBJECTS = $(XENC_SOURCES:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
 XENC_DEPS = $(XENC_OBJECTS:.o=.d)
 

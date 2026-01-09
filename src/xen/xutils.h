@@ -23,6 +23,9 @@ inline static char* xen_read_file(const char* filename) {
 
     i32 input_size = fp_size + 1;
     char* buffer   = (char*)malloc(input_size);
+    if (!buffer) {
+        xen_panic(XEN_ERR_ALLOCATION_FAILED, "failed to allocate string buffer");
+    }
 
     size_t read_bytes  = fread(buffer, 1, input_size, fp);
     buffer[read_bytes] = '\0';

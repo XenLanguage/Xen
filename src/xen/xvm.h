@@ -43,9 +43,6 @@ extern xen_vm g_vm;
 
 void xen_vm_init(xen_vm_config config);
 void xen_vm_shutdown();
-xen_exec_result xen_vm_exec(const char* source, bool emit_bytecode, const char* bytecode_filename);
-
-#define MAX_OBJECT_COUNT 9999
-#define MAX_STRINGS_COUNT 9999
+xen_exec_result xen_vm_exec(const char* source);
 
 #endif

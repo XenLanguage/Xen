@@ -46,7 +46,7 @@ void xen_builtins_register() {
     define_native_fn("Bool", xen_builtin_bool_ctor);
     define_native_fn("Array", xen_builtin_array_ctor);
     define_native_fn("Dictionary", xen_builtin_dict_ctor);
-    define_native_fn("U8IntArray", xen_builtin_u8array_ctor);
+    define_native_fn("UInt8Array", xen_builtin_u8array_ctor);
 }
 
 void xen_vm_register_namespace(const char* name, xen_value ns) {

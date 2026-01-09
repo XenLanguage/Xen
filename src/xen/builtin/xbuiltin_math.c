@@ -79,26 +79,22 @@ static xen_value math_random(i32 argc, array(xen_value) argv) {
 }
 
 static xen_value xen_num_abs(i32 argc, array(xen_value) argv) {
-    if (argc < 1 || !VAL_IS_NUMBER(argv[0]))
-        return NULL_VAL;
+    REQUIRE_ARG("value", 0, TYPEID_NUMBER);
     return NUMBER_VAL(fabs(VAL_AS_NUMBER(argv[0])));
 }
 
 static xen_value xen_num_floor(i32 argc, array(xen_value) argv) {
-    if (argc < 1 || !VAL_IS_NUMBER(argv[0]))
-        return NULL_VAL;
+    REQUIRE_ARG("value", 0, TYPEID_NUMBER);
     return NUMBER_VAL(floor(VAL_AS_NUMBER(argv[0])));
 }
 
 static xen_value xen_num_ceil(i32 argc, array(xen_value) argv) {
-    if (argc < 1 || !VAL_IS_NUMBER(argv[0]))
-        return NULL_VAL;
+    REQUIRE_ARG("value", 0, TYPEID_NUMBER);
     return NUMBER_VAL(ceil(VAL_AS_NUMBER(argv[0])));
 }
 
 static xen_value xen_num_round(i32 argc, array(xen_value) argv) {
-    if (argc < 1 || !VAL_IS_NUMBER(argv[0]))
-        return NULL_VAL;
+    REQUIRE_ARG("value", 0, TYPEID_NUMBER);
     return NUMBER_VAL(round(VAL_AS_NUMBER(argv[0])));
 }
 

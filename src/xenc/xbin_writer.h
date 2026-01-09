@@ -1,7 +1,7 @@
 #ifndef X_BIN_WRITER_H
 #define X_BIN_WRITER_H
 
-#include "xcommon.h"
+#include "../xen/xcommon.h"
 
 typedef struct {
     u64 capacity;

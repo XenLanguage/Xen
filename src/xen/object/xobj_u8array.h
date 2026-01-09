@@ -21,4 +21,6 @@ void xen_obj_u8array_set(xen_obj_u8array* arr, i32 index, u8 value);
 u8 xen_u8obj_array_pop(xen_obj_u8array* arr);
 i32 xen_obj_u8array_length(xen_obj_u8array* arr);
 
+// TODO: Add UInt8Array methods like .push()
+
 #endif

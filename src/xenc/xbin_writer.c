@@ -1,5 +1,5 @@
 #include "xbin_writer.h"
-#include "xerr.h"
+#include "../xen/xerr.h"
 
 void xen_bin_writer_init(xen_bin_writer* writer, u64 capacity) {
     if (capacity == 0) {
