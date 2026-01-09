@@ -175,7 +175,7 @@ static xen_value tcp_stream_write(i32 argc, xen_value* args) {
 
     xen_obj_str* data = OBJ_AS_STRING(args[1]);
     i32 decoded_size;
-    const char* data_decoded = decode_string_literal(data->str, data->length, &decoded_size);
+    const char* data_decoded = xen_decode_string_literal(data->str, data->length, &decoded_size);
     ssize_t bytes_written    = socket_write(fd, data_decoded, decoded_size);
 
     if (bytes_written < 0) {
@@ -207,7 +207,7 @@ static xen_value tcp_stream_send(i32 argc, xen_value* args) {
 
     xen_obj_str* data = OBJ_AS_STRING(args[1]);
     i32 decoded_size;
-    const char* data_decoded = decode_string_literal(data->str, data->length, &decoded_size);
+    const char* data_decoded = xen_decode_string_literal(data->str, data->length, &decoded_size);
 #ifdef PLATFORM_WINDOWS
     ssize_t bytes_sent = send(fd, data_decoded, decoded_size, 0);
 #else

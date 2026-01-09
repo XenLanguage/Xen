@@ -147,7 +147,7 @@ inline static char* xen_strdup(char* src) {
 }
 
 /// @brief Decodes string literals and applies escape sequences
-inline static char* decode_string_literal(const char* src, i32 src_len, i32* out_len) {
+inline static char* xen_decode_string_literal(const char* src, i32 src_len, i32* out_len) {
     char* dst = XEN_ALLOCATE(char, src_len + 1);
     i32 i = 0, j = 0;
 
