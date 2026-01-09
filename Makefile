@@ -101,3 +101,9 @@ info:
 	@echo "LDFLAGS: $(LDFLAGS)"
 	@echo "Build Dir: $(BUILD_DIR)"
 	@echo "Targets: $(ALL_TARGETS)"
+
+run-xen:
+	./build/linux-debug/bin/xen
+
+run-xenc:
+	./build/linux-debug/bin/xenc
