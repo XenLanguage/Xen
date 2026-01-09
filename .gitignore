@@ -3,4 +3,4 @@
 .VSCodeCounter/
 releases/
 build/
-create_release.sh
+make_release.sh

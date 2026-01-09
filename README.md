@@ -21,42 +21,46 @@ Xen is a loosely-typed, imperative scripting language written in C. Its syntax c
 If you want to try Xen out, you can download one of the pre-compiled binaries from our [releases](https://github.com/jakerieger/Xen/releases/latest).
 Xen currently has releases for Windows (x64), Linux (x64), and macOS (x64/ARM64).
 
-If you prefer to build from source, the process is pretty straight-forward. Xen uses a bash script ([generate_build.sh](generate_build.sh)) to generate Ninja build files for each platform.
+If you prefer to build from source, you need to be on a system that supports makefiles.
 
 ### 1. Clone the repository
 
 ```
 $ git clone https://github.com/jakerieger/Xen
+```
+
+### 2. Run make
+
+```
 $ cd Xen
+$ make
 ```
 
-### 2. Run the configuration script
+If you want to specify a platform or target, you can do so like this:
 
 ```
-$ ./generate_build.sh
+$ export BUILD_TYPE=release
+$ export TARGET_PLATFORM=windows
+$ make
 ```
 
-### 3. Build
+That's pretty much it. Builds are located in `build/`.
+
+## Cross-building
+
+Since Xen is developed by one guy (me) and since I only have one PC, builds for other platforms are generated using cross-compilation with toolchains like [MinGW](https://www.mingw-w64.org/) and [osxcross](https://github.com/tpoechtrager/osxcross). If you have these toolchains and they're in your path, you can build for all platforms with:
 
 ```
-$ ./build.sh <platform> <config> # i.e. linux debug
+$ make all-platforms
 ```
 
-> The final binary will be located in the `build` directory.
-
-### 4. Running Xen
-
-If you just want to run Xen immediately after building it, you can use the `run.sh` script:
-
-```
-$ ./run.sh <platform> <config> [args for Xen...]
-```
+> [!IMPORTANT] **Building from source on platforms other than Linux is not tested.**
 
 ## Editor Support
 
 While an LSP is still in development, there are syntax highlighting support extensions for both VS Code and Neovim:
 
-- [Download (VS Code)](https://github.com/XenLanguage/Xen-VSCode)
+- [Download (VS Code)](https://github.com/XenLanguage/Xen-VSCode) (Install with `Developer > Install Extension from Directory`)
 - [Download (Neovim)](https://github.com/XenLanguage/Xen-Neovim)
 
 ## Examples
