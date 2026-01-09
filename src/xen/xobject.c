@@ -256,10 +256,6 @@ xen_obj_bound_method* xen_obj_bound_method_new_func(xen_value receiver, xen_obj_
     return bound;
 }
 
-/* ============================================================================
- * method tables
- * ============================================================================ */
-
 // clang-format off
 static xen_method_entry string_methods[] = {
      {"len",         xen_str_len,         XEN_TRUE},   // property
