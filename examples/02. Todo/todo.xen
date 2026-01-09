@@ -18,7 +18,7 @@ fn todo() {
         io.println("");
         io.println("Your tasks:");
 
-        if (tasks.values().len == 0) {
+        if (tasks.len() == 0) {
             io.println(" - You have no tasks. Use the `add` command to add a task.");
         } else {
             var index = 0;

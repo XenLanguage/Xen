@@ -40,12 +40,13 @@ void xen_builtins_register() {
     define_native_fn("typeof", xen_builtin_typeof);
     define_native_fn("typeid", xen_builtin_typeid);
 
-    // type constructors
-    define_native_fn("number", xen_builtin_number_ctor);
-    define_native_fn("string", xen_builtin_string_ctor);
-    define_native_fn("bool", xen_builtin_bool_ctor);
-    define_native_fn("array", xen_builtin_array_ctor);
-    // TODO: Dictionary constructor
+    // type constructors (uses capitalization to distinguish from namespaces)
+    define_native_fn("Number", xen_builtin_number_ctor);
+    define_native_fn("String", xen_builtin_string_ctor);
+    define_native_fn("Bool", xen_builtin_bool_ctor);
+    define_native_fn("Array", xen_builtin_array_ctor);
+    define_native_fn("Dict", xen_builtin_dict_ctor);
+    define_native_fn("U8IntArray", xen_builtin_u8array_ctor);
 }
 
 void xen_vm_register_namespace(const char* name, xen_value ns) {

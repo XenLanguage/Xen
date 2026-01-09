@@ -8,7 +8,9 @@
 
 #include "../object/xobj_string.h"
 #include "../object/xobj_array.h"
+#include "../object/xobj_u8array.h"
 #include "../object/xobj_native_function.h"
+#include "../object/xobj_dict.h"
 
 #define REQUIRE_ARG(name, slot, typeid)                                                                                \
     do {                                                                                                               \
@@ -128,6 +130,36 @@ inline static xen_value xen_builtin_array_ctor(i32 argc, xen_value* argv) {
     }
 
     return OBJ_VAL(arr);
+}
+
+// signature: (number of elements, default value (or null if missing)) -> U8IntArray
+inline static xen_value xen_builtin_u8array_ctor(i32 argc, xen_value* argv) {
+    if (argc > 2) {
+        xen_runtime_error("U8IntArrray constructor has invalid number of arguments");
+        return NULL_VAL;
+    }
+
+    if (argc > 0 && argv[0].type != VAL_NUMBER) {
+        xen_runtime_error("element count must be a number");
+        return NULL_VAL;
+    }
+
+    i32 element_count = (argc > 0 && VAL_IS_NUMBER(argv[0])) ? VAL_AS_NUMBER(argv[0]) : 0;
+    bool has_default  = (argc == 2) ? XEN_TRUE : XEN_FALSE;
+    u8 default_value  = (has_default) ? (u8)VAL_AS_NUMBER(argv[1]) : 0;
+
+    // create the array
+    xen_obj_u8array* arr = xen_obj_u8array_new_with_capacity(element_count);
+    for (i32 i = 0; i < element_count; i++) {
+        xen_obj_u8array_push(arr, default_value);
+    }
+
+    return OBJ_VAL(arr);
+}
+
+// signature: () -> empty dictionary
+inline static xen_value xen_builtin_dict_ctor(i32 argc, xen_value* argv) {
+    return OBJ_VAL(xen_obj_dict_new());
 }
 
 #endif
