@@ -6,38 +6,9 @@
 
 ---
 
-Xen is a loosely-typed, imperative scripting language written in C. Its syntax closesly resembles C-like languages and the bytecode compiler and VM is a mere 70Kb in total. Its primary purpose is to serve as a learning project for myself and a fun side project to work on in my free time. **It is not designed with the intent of being a serious, production-ready language.**
+Xen is a loosely-typed, imperative scripting language written in C. Its syntax closely resembles C-like languages and the interpreter itself is a mere 120 Kb in size. Its primary purpose is to serve as a learning project for myself and a fun side project to work on in my free time. **It is not designed with the intent of being a serious, production-ready language.**
 
 ![](docs/demo.gif)
-
-```js
-include io;
-include net;
-
-const var PORT = 8080;
-
-fn run() {
-    const var l = new net.TcpListener(PORT);
-    l.bind_and_listen();
-
-    for (;;) {
-        var conn = l.accept();
-        var msg = conn.read();
-        if (msg != null) {
-            io.println("=== Client (", conn.remote_addr, ") ===");
-            io.println(msg);
-            const var resp = "HTTP/1.1 200 OK\nContent-Length: 5\n\nHello";
-            conn.send(resp);
-        }
-        conn.close();
-    }
-
-    l.close();
-}
-
-run();
-
-```
 
 ## Getting Started
 
