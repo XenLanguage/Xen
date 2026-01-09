@@ -353,6 +353,16 @@ static xen_value os_exists(i32 argc, xen_value* argv) {
     return BOOL_VAL(path_exists(OBJ_AS_CSTRING(argv[0])));
 }
 
+// Signature:
+// * duration: number (in seconds) :
+// fn sleep(duration) -> error: null | number (duration slept)
+static xen_value os_sleep(i32 argc, xen_value* argv) {
+    REQUIRE_ARG("duration", 0, TYPEID_NUMBER);
+    u32 duration = (u32)VAL_AS_NUMBER(argv[0]);
+    sleep(duration);
+    return NUMBER_VAL(duration);
+}
+
 xen_obj_namespace* xen_builtin_os() {
     xen_obj_namespace* os = xen_obj_namespace_new("os");
     xen_obj_namespace_set(os, "readtxt", OBJ_VAL(xen_obj_native_func_new(os_readtxt, "readtxt")));
@@ -364,5 +374,6 @@ xen_obj_namespace* xen_builtin_os() {
     xen_obj_namespace_set(os, "rmdir", OBJ_VAL(xen_obj_native_func_new(os_rmdir, "rmdir")));
     xen_obj_namespace_set(os, "rm", OBJ_VAL(xen_obj_native_func_new(os_rm, "rm")));
     xen_obj_namespace_set(os, "exists", OBJ_VAL(xen_obj_native_func_new(os_exists, "exists")));
+    xen_obj_namespace_set(os, "sleep", OBJ_VAL(xen_obj_native_func_new(os_sleep, "sleep")));
     return os;
 }
