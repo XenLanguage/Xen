@@ -1,10 +1,14 @@
 #ifndef X_BUILTIN_COMMON_H
 #define X_BUILTIN_COMMON_H
 
-#include "../xobject.h"
+#include "../object/xobj.h"
 #include "../xtable.h"
 #include "../xvm.h"
 #include "../xtypeid.h"
+
+#include "../object/xobj_string.h"
+#include "../object/xobj_array.h"
+#include "../object/xobj_native_function.h"
 
 #define REQUIRE_ARG(name, slot, typeid)                                                                                \
     do {                                                                                                               \

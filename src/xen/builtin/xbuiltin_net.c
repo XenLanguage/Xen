@@ -2,6 +2,13 @@
 #include "xbuiltin_common.h"
 #include "../xutils.h"
 
+#include "../object/xobj_string.h"
+#include "../object/xobj_array.h"
+#include "../object/xobj_namespace.h"
+#include "../object/xobj_native_function.h"
+#include "../object/xobj_class.h"
+#include "../object/xobj_instance.h"
+
 //==============================================================//
 //                          Globals                             //
 //==============================================================//

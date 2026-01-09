@@ -1,6 +1,11 @@
 #include "xbuiltin_dict.h"
 #include "xbuiltin_common.h"
 
+#include "../object/xobj_string.h"
+#include "../object/xobj_dict.h"
+#include "../object/xobj_namespace.h"
+#include "../object/xobj_native_function.h"
+
 xen_value xen_dict_len(i32 argc, xen_value* argv) {
     if (argc < 1 || !OBJ_IS_DICT(argv[0]))
         return NUMBER_VAL(0);

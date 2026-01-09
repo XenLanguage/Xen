@@ -1,5 +1,11 @@
 #include "xbuiltin_string.h"
 #include "xbuiltin_common.h"
+
+#include "../object/xobj_string.h"
+#include "../object/xobj_array.h"
+#include "../object/xobj_native_function.h"
+#include "../object/xobj_namespace.h"
+
 #include <ctype.h>
 
 xen_value xen_str_len(i32 argc, xen_value* argv) {

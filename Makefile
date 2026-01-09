@@ -66,8 +66,8 @@ export SRC_DIR = src
 ALL_TARGETS :=
 
 # Include module makefiles
-include src/xen/xen.mk
-include src/xenc/xenc.mk
+include src/xen/Makefile
+include src/xenc/Makefile
 
 .PHONY: all clean dirs info all-platforms
 

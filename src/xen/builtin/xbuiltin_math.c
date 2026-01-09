@@ -1,5 +1,8 @@
 #include "xbuiltin_math.h"
 #include "xbuiltin_common.h"
+
+#include "../object/xobj_namespace.h"
+
 #include <math.h>
 
 static xen_value math_sqrt(i32 argc, xen_value* argv) {

@@ -1,6 +1,11 @@
 #include "xbuiltin_io.h"
 #include "xbuiltin_common.h"
 
+#include "../object/xobj_string.h"
+#include "../object/xobj_array.h"
+#include "../object/xobj_namespace.h"
+#include "../object/xobj_native_function.h"
+
 static xen_value io_println(i32 argc, xen_value* argv) {
     REQUIRE_ARG("msg", 0, TYPEID_UNDEFINED);
     for (i32 i = 0; i < argc; i++) {

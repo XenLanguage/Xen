@@ -4,7 +4,6 @@
 #include "xalloc.h"
 #include "xvm_config.h"
 #include "xstack.h"
-#include "xobject.h"
 #include "xtable.h"
 #include "xmem.h"
 #include "xchunk.h"

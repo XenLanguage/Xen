@@ -1,7 +1,7 @@
 #include "xtable.h"
 #include "xmem.h"
 #include "xvalue.h"
-#include "xobject.h"
+#include "object/xobj_string.h"
 
 void xen_table_init(xen_table* table) {
     table->count    = 0;

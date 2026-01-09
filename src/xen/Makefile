@@ -1,8 +1,10 @@
 XEN_SOURCES = $(wildcard $(SRC_DIR)/xen/*.c) \
-              $(wildcard $(SRC_DIR)/xen/builtin/*.c)
-
+              $(wildcard $(SRC_DIR)/xen/builtin/*.c) \
+			  $(wildcard $(SRC_DIR)/xen/object/*.c)
+			  
 XEN_HEADERS = $(wildcard $(SRC_DIR)/xen/*.h) \
-              $(wildcard $(SRC_DIR)/xen/builtin/*.h)
+              $(wildcard $(SRC_DIR)/xen/builtin/*.h) \
+			  $(wildcard $(SRC_DIR)/xen/object/*.h)
 
 XEN_OBJECTS = $(XEN_SOURCES:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
 XEN_DEPS = $(XEN_OBJECTS:.o=.d)

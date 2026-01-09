@@ -1,5 +1,11 @@
 #include "xbuiltin_datetime.h"
 #include "xbuiltin_common.h"
+
+#include "../object/xobj_string.h"
+#include "../object/xobj_array.h"
+#include "../object/xobj_namespace.h"
+#include "../object/xobj_native_function.h"
+
 #include <time.h>
 
 static xen_value time_now(i32 argc, xen_value* argv) {

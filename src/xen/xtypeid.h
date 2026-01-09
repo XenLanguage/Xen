@@ -1,7 +1,7 @@
 #ifndef X_TYPEID_H
 #define X_TYPEID_H
 
-#include "xobject.h"
+#include "object/xobj.h"
 
 #define TYPEID_UNDEFINED (-1)
 #define TYPEID_BOOL (VAL_BOOL)
@@ -52,6 +52,40 @@ inline static i32 xen_typeid_get(xen_value value) {
         }
     }
     return TYPEID_UNDEFINED;
+}
+
+inline static const char* xen_typeid_str(i32 typeid) {
+    switch (typeid) {
+        case TYPEID_BOOL:
+            return "Bool";
+        case TYPEID_NULL:
+            return "Null";
+        case TYPEID_NUMBER:
+            return "Number";
+        case TYPEID_STRING:
+            return "String";
+        case TYPEID_FUNC:
+            return "Function";
+        case TYPEID_NATIVE_FUNC:
+            return "Native_Function";
+        case TYPEID_NAMESPACE:
+            return "Namespace";
+        case TYPEID_ARRAY:
+            return "Array";
+        case TYPEID_BOUND_METHOD:
+            return "Bound_Method";
+        case TYPEID_DICT:
+            return "Dictionary";
+        case TYPEID_CLASS:
+            return "Class";
+        case TYPEID_INSTANCE:
+            return "Instance";
+        case TYPEID_U8ARRAY:
+            return "U8Array";
+        case TYPEID_UNDEFINED:
+        default:
+            return "Undefined";
+    }
 }
 
 #endif

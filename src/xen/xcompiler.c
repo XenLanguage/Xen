@@ -2,13 +2,17 @@
 #include "xchunk.h"
 #include "xcommon.h"
 #include "xerr.h"
-#include "xobject.h"
 #include "xscanner.h"
 #include "xvalue.h"
 #include "xtable.h"
 #include "xvm.h"
 #include "xutils.h"
 #include "builtin/xbuiltin.h"
+
+// objects
+#include "object/xobj_function.h"
+#include "object/xobj_string.h"
+
 #include <math.h>
 #include <string.h>
 
@@ -226,7 +230,7 @@ static void mark_as_included(const char* path) {
         error("too many includes");
         return;
     }
-    include_tracker.paths[include_tracker.count] = xen_strdup(path);
+    include_tracker.paths[include_tracker.count] = xen_strdup((char*)path);
     include_tracker.count++;
 }
 

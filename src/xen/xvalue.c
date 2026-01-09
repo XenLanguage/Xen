@@ -1,7 +1,14 @@
 #include "xvalue.h"
 #include "xmem.h"
-#include "xobject.h"
 #include "math.h"
+
+#include "object/xobj_string.h"
+#include "object/xobj_array.h"
+#include "object/xobj_dict.h"
+#include "object/xobj_function.h"
+#include "object/xobj_native_function.h"
+#include "object/xobj_namespace.h"
+#include "object/xobj_bound_method.h"
 
 bool xen_value_equal(xen_value a, xen_value b) {
     if (a.type != b.type)

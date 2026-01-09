@@ -1,6 +1,11 @@
 #include "xbuiltin_array.h"
 #include "xbuiltin_common.h"
 
+#include "../object/xobj_string.h"
+#include "../object/xobj_array.h"
+#include "../object/xobj_namespace.h"
+#include "../object/xobj_native_function.h"
+
 xen_value xen_arr_len(i32 argc, xen_value* argv) {
     if (argc < 1 || !OBJ_IS_ARRAY(argv[0]))
         return NUMBER_VAL(-1);

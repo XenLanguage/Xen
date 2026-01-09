@@ -6,13 +6,22 @@
 #include "xerr.h"
 #include "xmem.h"
 #include "xcompiler.h"
-#include "xobject.h"
 #include "xstack.h"
 #include "xtable.h"
 #include "xutils.h"
 #include "xvalue.h"
 #include "xtypeid.h"
 #include "builtin/xbuiltin.h"
+
+#include "object/xobj_string.h"
+#include "object/xobj_class.h"
+#include "object/xobj_namespace.h"
+#include "object/xobj_function.h"
+#include "object/xobj_array.h"
+#include "object/xobj_dict.h"
+#include "object/xobj_instance.h"
+#include "object/xobj_bound_method.h"
+#include "object/xobj_u8array.h"
 
 //====================================================================================================================//
 

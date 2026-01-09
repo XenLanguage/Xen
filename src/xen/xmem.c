@@ -2,8 +2,17 @@
 #include "xerr.h"
 #include "xtable.h"
 #include "xvalue.h"
-#include "xobject.h"
 #include "xvm.h"
+
+#include "object/xobj_string.h"
+#include "object/xobj_class.h"
+#include "object/xobj_namespace.h"
+#include "object/xobj_function.h"
+#include "object/xobj_array.h"
+#include "object/xobj_dict.h"
+#include "object/xobj_instance.h"
+#include "object/xobj_bound_method.h"
+#include "object/xobj_u8array.h"
 
 void xen_vm_mem_init(xen_vm_mem* mem, size_t size_perm, size_t size_gen, size_t size_temp) {
     mem->permanent  = xen_alloc_create(size_perm);
@@ -105,6 +114,12 @@ static void xen_mem_free_object(xen_obj* obj) {
             free_class((xen_obj*)inst->class);
             XEN_FREE_ARRAY(xen_value, inst->fields, inst->class->property_count);
             XEN_FREE(xen_obj_instance, obj);
+            break;
+        }
+        case OBJ_U8ARRAY: {
+            xen_obj_u8array* arr = (xen_obj_u8array*)obj;
+            XEN_FREE_ARRAY(u8, arr->values, arr->count);
+            XEN_FREE(xen_obj_u8array, obj);
             break;
         }
     }
