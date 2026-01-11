@@ -1,6 +1,7 @@
 # Changelog
 
 ## Table of Contents
+- [v0.5.4](#v054-january-11-2026)
 - [v0.5.3](#v053-january-8-2026)
 - [v0.5.2](#v052-january-7-2026)
 - [v0.5.1](#v051-january-7-2026)
@@ -10,6 +11,25 @@
 - [v0.3.0](#v030-january-2-2026)
 - [v0.2.0](#v020-january-2-2026)
 - [v0.1.0](#v010-january-1-2026)
+
+## v0.5.4 (January 11, 2026)
+
+Xen v0.5.4 brings lots of bug fixes and reliability tweaks, as well as some new additions to the language.
+
+### Added
+- `os.sleep()` function for sleeping the current process
+- `UInt8Array` type for storing byte sequences
+- `dictionary` namespace and constructor with `Dictionary()`
+- `.len()` to dictionaries
+
+### Changed
+- Renamed `dict` namespace to `dictionary`
+- Made all constructors capitalized: `number("10")` -> `Number("10")`
+
+### Fixed
+- String literals get properly decoded now so `io.println("\n")` will print an actual newline instead of a literal "\n" (as well as any other functions that accept string input)
+- Memory leaks from certain objects not getting properly destroyed
+- Bug in token scanner when matching tokens
 
 ## v0.5.3 (January 8, 2026)
 
