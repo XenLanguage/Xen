@@ -1,27 +1,104 @@
 include io;
-include os;
-include net;
 
 fn control_flow() {
-    var bool = true;
-    if (bool) {
-        // do something
-    } else if () {
-        // do something else
+    var employee_one = ["John", 34];
+    var employee_two = ["Stacy", 28];
+
+    if (employee_one[1] > employee_two[1]) {
+        io.println(employee_one[0], " is older than ", employee_two[0]);
     } else {
-        // do something else
+        io.println(employee_one[0], " is younger than ", employee_two[0]);
     }
-
-    var bool_2 = false;
-    if (bool and bool_2) {}
-
-    if (bool or bool_2) {}
 }
 
-fn operators() {}
+fn operators() {
+    var x = 10;
+    io.println(x++); // '10'
+    io.println(++x); // '12'
 
-fn loops() {}
+    var y = 20;
+    io.println(y--); // '20'
+    io.println(--y); // '18'
 
-fn lambdas() {}
+    var z = 1;
+    z += 1;
+    z *= 2;
+    z -= 3;
+    z /= 4;
+    z %= 5;
+    io.println(z);
+}
 
-fn classes() {}
+fn loops() {
+    var should_exit = false;
+    while (!should_exit) {
+        io.println("While loop body");
+        should_exit = true;
+    }
+
+    for (var i = 0; i < 1; i++) {
+        io.println("C-style for loop body");
+    }
+
+    for (var i in 0..1) {
+        io.println("Range-based for loop body");
+    }
+
+    var items = [1,2,3];
+    for (var item in items) {
+        io.print(item, " ");
+    }
+    io.print("\n");
+}
+
+fn lambdas() {
+    // Variable lambdas require semicolons at the end of their definition
+    const var add = fn(a, b) => a + b;
+    io.println(add(10, 20));
+
+    const var sub = fn(a, b) {
+        return a - b;
+    };
+    io.println(sub(10, 20));
+
+    // Anonymous functions do not require semicolons
+    fn exec(func) { func(); }
+    exec(fn() {
+        io.println("Anonymous function"); 
+    });
+
+    fn exec_args(func, args) {
+        io.println(func(args));
+    }
+    exec_args(fn(values) => values[1], [1, 2, 3]);
+}
+
+control_flow();
+operators();
+loops();
+lambdas();
+
+class Employee {
+    name   = "";
+    age    = 0;
+    gender = "";
+
+    private fn is_minor(age) {
+        return age < 18;
+    }
+
+    init(name, age, gender) {
+        if (this.is_minor(age)) {
+            return Error("Employee is under age");
+        }
+
+        this.name = name;
+        this.age = age;
+        this.gender = gender;
+    }
+};
+
+const var johnny = new Employee("Johnny", 17, "M");
+if (johnny is Error) {
+    io.println("error: ", johnny.msg());
+}

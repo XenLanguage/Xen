@@ -54,6 +54,7 @@ typedef u8 byte;
 #define XEN_UNLIKELY(x) __builtin_expect(!!(x), 0)
 #define XEN_BARF_ON(condition) ((void)sizeof(char[1 - 2 * !!(condition)]))
 #define XEN_UNUSED(x) (void)(x)
+#define XEN_STREQ(a, b) strcmp(a, b) == 0
 
 #define XEN_CLEANUP_FREE __attribute__((cleanup(xen_cleanup_free)))
 

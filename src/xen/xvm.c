@@ -840,6 +840,38 @@ static xen_exec_result run() {
                 stack_push(value);
                 break;
             }
+            case OP_IS_TYPE: {
+                const char* type_name = READ_STRING()->str;
+                xen_value value       = peek(0);  // Don't pop yet, we'll replace with result
+                const i32 typeid      = xen_typeid_get(value);
+                bool result           = false;
+
+                if (XEN_STREQ(type_name, "Number")) {
+                    result = typeid == TYPEID_NUMBER;
+                } else if (XEN_STREQ(type_name, "String")) {
+                    result = typeid == TYPEID_STRING;
+                } else if (XEN_STREQ(type_name, "Bool")) {
+                    result = typeid == TYPEID_BOOL;
+                } else if (XEN_STREQ(type_name, "Array")) {
+                    result = typeid == TYPEID_ARRAY;
+                } else if (XEN_STREQ(type_name, "Dictionary")) {
+                    result = typeid == TYPEID_DICT;
+                } else if (XEN_STREQ(type_name, "UInt8Array")) {
+                    result = typeid == TYPEID_U8ARRAY;
+                } else if (XEN_STREQ(type_name, "Error")) {
+                    result = typeid == TYPEID_ERROR;
+                } else if (VAL_IS_OBJ(value) && OBJ_IS_INSTANCE(value)) {
+                    xen_obj_instance* inst = OBJ_AS_INSTANCE(value);
+                    if (inst->class->name->length == strlen(type_name) &&
+                        memcmp(inst->class->name->str, type_name, strlen(type_name)) == 0) {
+                        result = true;
+                    }
+                }
+
+                stack_pop();
+                stack_push(BOOL_VAL(result));
+                break;
+            }
             default: {
                 runtime_error("unknown instruction (%d)", instruction);
             }

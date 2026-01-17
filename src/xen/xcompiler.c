@@ -955,6 +955,14 @@ static void new_expr(bool can_assign) {
     emit_bytes(OP_CALL_INIT, arg_count);
 }
 
+static void is_(bool can_assign) {
+    XEN_UNUSED(can_assign);
+
+    consume(TOKEN_IDENTIFIER, "expected type name after 'is'");
+    u8 type_constant = identifier_constant(&parser.previous);
+    emit_bytes(OP_IS_TYPE, type_constant);
+}
+
 // ============================================================================
 // Parse Rules
 // ============================================================================
@@ -1012,6 +1020,7 @@ xen_parse_rule rules[] = {
     [TOKEN_INCLUDE]          = {NULL,       NULL,        PREC_NONE},
     [TOKEN_THIS]             = {this_,      NULL,        PREC_NONE},
     [TOKEN_NEW]              = {new_expr,   NULL,        PREC_NONE},
+    [TOKEN_IS]               = {NULL,       is_,         PREC_COMPARISON},
     [TOKEN_ERROR]            = {NULL,       NULL,        PREC_NONE},
     [TOKEN_EOF]              = {NULL,       NULL,        PREC_NONE},
 };

@@ -142,6 +142,8 @@ static xen_token_type identifier_type() {
                 switch (scanner.start[1]) {
                     case 'f':
                         return check_keyword(2, 0, "", TOKEN_IF);
+                    case 's':
+                        return check_keyword(2, 0, "", TOKEN_IS);
                     case 'n':
                         if (scanner.current - scanner.start == 2) {
                             return TOKEN_IN;
@@ -438,6 +440,8 @@ const char* xen_token_type_to_str(xen_token_type type) {
             return "::";
         case TOKEN_AS:
             return "as";
+        case TOKEN_IS:
+            return "is";
     }
     return "";
 }

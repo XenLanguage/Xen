@@ -46,6 +46,7 @@ typedef enum {
     OP_PROPERTY,
     OP_INITIALIZER,
     OP_CALL_INIT,
+    OP_IS_TYPE,  // Check if value is of a specific type
 } xen_opcode;
 
 typedef struct {
