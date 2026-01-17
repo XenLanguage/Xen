@@ -1159,20 +1159,26 @@ xen_obj_func* xen_decode_bytecode(u8* bytecode, const size_t size) {
     return fn;
 }
 
-xen_exec_result xen_vm_exec(const char* source, char** args, i32 arg_count) {
+static void create_env_namespace(char** args, i32 argc) {
     xen_obj_namespace* env    = xen_obj_namespace_new("env");
-    xen_obj_array* args_array = xen_obj_array_new_with_capacity(arg_count);
+    xen_obj_array* args_array = xen_obj_array_new_with_capacity(argc);
 
-    for (int i = 0; i < arg_count; i++) {
+    for (int i = 0; i < argc; i++) {
         xen_obj_str* arg_str = xen_obj_str_copy(args[i], strlen(args[i]));
         xen_value_array_write(&args_array->array, OBJ_VAL(arg_str));
     }
 
     xen_obj_namespace_set(env, "args", OBJ_VAL(args_array));
-    xen_obj_namespace_set(env, "argc", NUMBER_VAL(arg_count));
+    xen_obj_namespace_set(env, "argc", NUMBER_VAL(argc));
 
     xen_obj_str* env_name = xen_obj_str_copy("env", 3);
     xen_table_set(&g_vm.globals, env_name, OBJ_VAL(env));
+}
+
+xen_exec_result xen_vm_exec(const char* source, char** args, i32 argc) {
+    if (args != NULL && argc > 0) {
+        create_env_namespace(args, argc);
+    }
 
     xen_obj_func* fn = xen_compile(source);
     return exec(fn);
