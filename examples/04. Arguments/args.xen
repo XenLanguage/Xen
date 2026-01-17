@@ -1,0 +1,29 @@
+include io;
+
+fn cmd_help() {
+    io.println("COMMANDS");
+    io.println("  help       Prints this message");
+    io.println("  version    Prints the version number");
+}
+
+fn cmd_version() {
+    io.println("version 1.0.0");
+}
+
+fn parse_args() {
+    if (env.argc > 0) {
+        const var cmd = env.args[0];
+        if (cmd == "help") {
+            cmd_help();
+        }
+        else if (cmd == "version") {
+            cmd_version();
+        }
+        else {
+            io.println("error: unknown command '", env.args[0], "'");
+            cmd_help();
+        }
+    }
+}
+
+parse_args();
